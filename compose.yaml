@@ -1,0 +1,13 @@
+services:
+  game:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "4173:4173"
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 4173
+      PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-http://localhost:4173}
+      MAX_LOBBIES: ${MAX_LOBBIES:-1000}
+      LOBBY_TTL_MINUTES: ${LOBBY_TTL_MINUTES:-360}

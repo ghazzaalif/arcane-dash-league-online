@@ -1,0 +1,13 @@
+{
+  "name": "arcane-dash-league-online",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Deployable online lobby server and browser game for Arcane Dash League",
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check server.js && node --check game.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

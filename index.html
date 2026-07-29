@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Arcane Dash League, an original online multiplayer fantasy racing game." />
+  <title>Arcane Dash League</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Online multiplayer edition</p>
+        <h1>Arcane Dash League</h1>
+      </div>
+      <div class="topbar-actions">
+        <button id="charactersButton" class="ghost-button" type="button">Runner archive</button>
+        <button id="soundButton" class="ghost-button sound-button" type="button" aria-pressed="true">Sound: on</button>
+        <button id="rulesButton" class="ghost-button" type="button">How to play</button>
+      </div>
+    </header>
+
+    <main id="app" aria-live="polite"></main>
+
+    <footer>
+      Original code, names, text, icons, sound synthesis, and visual design. Built with HTML, CSS, JavaScript, and a deployable Node lobby server.
+    </footer>
+  </div>
+
+  <dialog id="rulesDialog">
+    <div class="dialog-head">
+      <div>
+        <p class="eyebrow">Rules</p>
+        <h2>How to play</h2>
+      </div>
+      <button id="closeRulesButton" class="icon-button" type="button" aria-label="Close rules">×</button>
+    </div>
+    <div class="rules-copy">
+      <p>Draft four runners for each team. The draft happens in two open waves using a snake order.</p>
+      <p>Play four races. Before each race, every team chooses one runner that has not raced yet.</p>
+      <p>On a turn, roll and move. Every runner has a unique power that changes movement, reactions, or hazards.</p>
+      <p>The Calm Course has no special spaces. The Chaos Circuit contains boosts, setbacks, and trip spaces.</p>
+      <p>The first two runners to cross space 30 score points. Later races are worth more. Highest total after four races wins.</p>
+    </div>
+  </dialog>
+
+  <dialog id="charactersDialog" class="archive-dialog">
+    <div class="dialog-head archive-head">
+      <div>
+        <p class="eyebrow">Runner archive</p>
+        <h2>All available runners</h2>
+        <p class="dialog-subtitle">Review every power before drafting.</p>
+      </div>
+      <button id="closeCharactersButton" class="icon-button" type="button" aria-label="Close runner archive">×</button>
+    </div>
+    <div class="archive-tools">
+      <label for="characterSearch">Search runners or powers</label>
+      <input id="characterSearch" type="search" placeholder="Try: reroll, boost, leader..." autocomplete="off" />
+    </div>
+    <div id="characterGrid" class="archive-grid"></div>
+  </dialog>
+
+  <script src="game.js"></script>
+</body>
+</html>
