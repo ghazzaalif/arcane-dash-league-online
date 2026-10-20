@@ -21,13 +21,20 @@ const STATIC_FILES = new Map([
   ["/", "index.html"],
   ["/index.html", "index.html"],
   ["/game.js", "game.js"],
-  ["/styles.css", "styles.css"]
+  ["/styles.css", "styles.css"],
+  ["/runners-art.js", "runners-art.js"],
+  ["/maps.js", "maps.js"],
+  ["/fonts/display-800.woff2", "fonts/display-800.woff2"],
+  ["/fonts/display-900.woff2", "fonts/display-900.woff2"],
+  ["/fonts/body-400.woff2", "fonts/body-400.woff2"],
+  ["/fonts/body-700.woff2", "fonts/body-700.woff2"]
 ]);
 
 const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
-  ".css": "text/css; charset=utf-8"
+  ".css": "text/css; charset=utf-8",
+  ".woff2": "font/woff2"
 };
 
 function clampInteger(value, min, max, fallback) {
@@ -247,7 +254,7 @@ function serveStatic(req, res, pathname) {
     const headers = {
       "Content-Type": MIME_TYPES[path.extname(filePath).toLowerCase()] || "application/octet-stream",
       "Content-Length": stats.size,
-      "Cache-Control": filename === "index.html" ? "no-cache" : "public, max-age=3600",
+      "Cache-Control": filename === "index.html" ? "no-cache" : filename.startsWith("fonts/") ? "public, max-age=604800, immutable" : "public, max-age=3600",
       ETag: `W/\"${stats.size}-${Math.trunc(stats.mtimeMs)}\"`
     };
     if (req.headers["if-none-match"] === headers.ETag) {

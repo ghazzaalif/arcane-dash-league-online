@@ -81,14 +81,30 @@ See `DEPLOYMENT.md` for Docker, managed Node hosting, reverse-proxy, and operati
 ## Files
 
 - `index.html` - game page and dialogs
-- `styles.css` - responsive interface, route board, lobby, and animations
+- `styles.css` - responsive interface, race board, lobby, and animations
 - `game.js` - rules, UI, audio, host authority, online sessions, and synchronization
+- `runners-art.js` - original SVG portraits for all 24 runners
+- `maps.js` - the four illustrated race maps (landscape on desktop, portrait on phones)
+- `fonts/` - self-hosted Big Shoulders Display and Atkinson Hyperlegible (SIL Open Font License)
 - `server.js` - public HTTP server, lobby API, authentication, SSE relay, and health checks
 - `Dockerfile` - production container image
 - `compose.yaml` - local container or VPS launch configuration
 - `Procfile` - generic managed Node process declaration
 - `.env.example` - production environment template
 - `DEPLOYMENT.md` - deployment and operations guide
+
+## Runner balance
+
+Every runner power is tuned against a headless simulation of the real rules in `game.js`:
+tens of thousands of races in 2, 3 and 4-team fields, measuring each runner's expected
+points (first place weighted double). Every runner now lands within about 5% of a fair
+share. If you change a power, re-run the numbers before shipping; the `tune` values on each
+runner in `RACERS` hold the numbers the rules read.
+
+## Tracks
+
+Races alternate calm and chaos rules, and each race has its own map:
+Whisper Grove (calm), Ember Ridge (chaos), Moon Pool (calm), Storm Spire (chaos finale).
 
 ## Local-only mode
 

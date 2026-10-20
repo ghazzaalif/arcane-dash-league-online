@@ -1,9 +1,9 @@
 "use strict";
 
-const PLAYER_COLORS = ["#7ce6d2", "#ff9d6c", "#c9a6ff", "#ff8b9d"];
+const PLAYER_COLORS = ["#ff7a45", "#4ea8ff", "#b8e04f", "#ff6fae"];
 const TRACK_LENGTH = 30;
 const RACE_POINTS = [[3, 1], [5, 2], [7, 3], [10, 5]];
-const STEP_DELAY = 135;
+const STEP_DELAY = 150;
 const CHAOS_SPACES = {
   5: { type: "boost", label: "+2", amount: 2 },
   9: { type: "setback", label: "-2", amount: -2 },
@@ -14,66 +14,33 @@ const CHAOS_SPACES = {
   26: { type: "setback", label: "-2", amount: -2 }
 };
 
-
-const BOARD_SPACES = [
-  { x: 70, y: 525 },
-  { x: 135, y: 525 },
-  { x: 195, y: 500 },
-  { x: 245, y: 455 },
-  { x: 280, y: 400 },
-  { x: 290, y: 340 },
-  { x: 270, y: 280 },
-  { x: 225, y: 230 },
-  { x: 175, y: 190 },
-  { x: 130, y: 145 },
-  { x: 180, y: 95 },
-  { x: 250, y: 80 },
-  { x: 320, y: 95 },
-  { x: 375, y: 135 },
-  { x: 405, y: 190 },
-  { x: 430, y: 245 },
-  { x: 490, y: 275 },
-  { x: 555, y: 260 },
-  { x: 610, y: 225 },
-  { x: 650, y: 175 },
-  { x: 690, y: 120 },
-  { x: 755, y: 95 },
-  { x: 820, y: 115 },
-  { x: 870, y: 160 },
-  { x: 900, y: 215 },
-  { x: 900, y: 280 },
-  { x: 875, y: 340 },
-  { x: 830, y: 395 },
-  { x: 770, y: 440 },
-  { x: 735, y: 500 },
-  { x: 820, y: 540 }
-];
-
+// Every power is tuned against a headless simulation of these exact rules
+// (thousands of 2, 3 and 4-team races) so no runner's expected points sit far from the pack.
 const RACERS = [
-  { id: "clockwork-hare", name: "Clockwork Hare", icon: "🐇", tagline: "A spring in every step", powerName: "Second Chance", power: "When you roll a 1, reroll it once.", rating: 4 },
-  { id: "moss-golem", name: "Moss Golem", icon: "🗿", tagline: "Slow, steady, exact", powerName: "Measured March", power: "Move exactly 4 instead of rolling.", rating: 4 },
-  { id: "comet-kid", name: "Comet Kid", icon: "☄️", tagline: "Maximum velocity", powerName: "Flare Up", power: "A natural 6 gains 2 extra movement.", rating: 4 },
-  { id: "bubble-witch", name: "Bubble Witch", icon: "🫧", tagline: "Trouble slides right off", powerName: "Protective Orb", power: "Ignore setbacks and trip spaces.", rating: 4 },
-  { id: "echo-fox", name: "Echo Fox", icon: "🦊", tagline: "Every cheer carries", powerName: "Resonance", power: "Whenever another runner rolls a natural 6, move 1.", rating: 3 },
-  { id: "anchor-knight", name: "Anchor Knight", icon: "⚓", tagline: "Never gives ground", powerName: "Hold Fast", power: "Cannot be moved backward by powers or track spaces.", rating: 4 },
-  { id: "lantern-sprite", name: "Lantern Sprite", icon: "🏮", tagline: "Brightest from behind", powerName: "Catch-Up Glow", power: "Gain 2 movement when starting your turn in last place.", rating: 4 },
-  { id: "prism-slime", name: "Prism Slime", icon: "🟣", tagline: "Personal space is optional", powerName: "Slick Landing", power: "After moving, runners sharing your space slide back 1.", rating: 3 },
-  { id: "storm-crow", name: "Storm Crow", icon: "🌩️", tagline: "Bad rolls summon good weather", powerName: "Thunder Jump", power: "On a natural 1, jump to two spaces behind the leader.", rating: 4 },
-  { id: "moon-moth", name: "Moon Moth", icon: "🦋", tagline: "Odd numbers feel lucky", powerName: "Lunar Drift", power: "Odd rolls gain 1 extra movement.", rating: 3 },
-  { id: "gear-goblin", name: "Gear Goblin", icon: "⚙️", tagline: "Always tuning something", powerName: "Overclock", power: "Gain 1 movement while at least 6 spaces behind the leader.", rating: 3 },
-  { id: "frost-yak", name: "Frost Yak", icon: "🦬", tagline: "A portable cold front", powerName: "Chill Field", power: "Opponents sharing your space lose 1 movement on their turns.", rating: 3 },
-  { id: "portal-pup", name: "Portal Pup", icon: "🐕", tagline: "Doors are everywhere", powerName: "Blink", power: "After landing on another runner, move 2 more.", rating: 4 },
-  { id: "quake-beetle", name: "Quake Beetle", icon: "🪲", tagline: "Tiny feet, huge impact", powerName: "Ground Pound", power: "On a natural 6, nearby opponents slide back 1.", rating: 3 },
-  { id: "lucky-turnip", name: "Lucky Turnip", icon: "🥬", tagline: "Rooting for a reroll", powerName: "Fresh Start", power: "Once per race, reroll a result of 1 or 2.", rating: 4 },
-  { id: "shadow-cat", name: "Shadow Cat", icon: "🐈‍⬛", tagline: "Crowds are shortcuts", powerName: "Slipstream", power: "Occupied spaces do not count while you move.", rating: 4 },
-  { id: "crown-crab", name: "Crown Crab", icon: "🦀", tagline: "First place is a lifestyle", powerName: "Royal Pace", power: "Gain 2 movement when starting your turn tied for the lead.", rating: 3 },
-  { id: "nap-dragon", name: "Nap Dragon", icon: "🐉", tagline: "Wakes up unpredictably", powerName: "Dream Die", power: "Roll an eight-sided die instead of a six-sided die.", rating: 4 },
-  { id: "spark-snail", name: "Spark Snail", icon: "🐌", tagline: "Charges between turns", powerName: "Stored Energy", power: "Gain 2 movement on every second turn.", rating: 3 },
-  { id: "wisp-twins", name: "Wisp Twins", icon: "👻", tagline: "One pushes, one pulls", powerName: "Alternating Current", power: "Gain 2 on odd turns and lose 1 on even turns.", rating: 3 },
-  { id: "river-otter", name: "River Otter", icon: "🦦", tagline: "Momentum loves company", powerName: "Draft Current", power: "Gain 1 movement for each runner sharing your starting space.", rating: 3 },
-  { id: "meteor-mouse", name: "Meteor Mouse", icon: "🐁", tagline: "Small target, big launch", powerName: "Slingshot", power: "If you begin 10 or more spaces behind the leader, move directly 5 spaces.", rating: 4 },
-  { id: "mirror-owl", name: "Mirror Owl", icon: "🦉", tagline: "Watching closely", powerName: "Reflection", power: "If the previous runner rolled 5 or 6, gain 1 movement.", rating: 3 },
-  { id: "pepper-pixie", name: "Pepper Pixie", icon: "🌶️", tagline: "A little too energetic", powerName: "Spicy Finish", power: "Gain 3 movement after crossing space 20 for the first time.", rating: 3 }
+  { id: "clockwork-hare", name: "Clockwork Hare", role: "Steady", tagline: "Wound tight, never quits", powerName: "Second Chance", power: "Reroll any 1, and the reroll gains 1.", tune: { below: 1, bonus: 1 } },
+  { id: "moss-golem", name: "Moss Golem", role: "Steady", tagline: "Slow, steady, exact", powerName: "Measured March", power: "Always move exactly 4, or 5 when you start 6+ spaces behind the leader.", tune: { fixed: 4, last: 5, gap: 6 } },
+  { id: "comet-kid", name: "Comet Kid", role: "Sprinter", tagline: "Maximum velocity", powerName: "Flare Up", power: "A natural 6 moves 3 extra.", tune: { bonus: 3 } },
+  { id: "bubble-witch", name: "Bubble Witch", role: "Trickster", tagline: "Trouble slides right off", powerName: "Bubble Bounce", power: "Ignore setbacks and trips. When a rival lands on you, bounce forward 2.", tune: { bounce: 2 } },
+  { id: "echo-fox", name: "Echo Fox", role: "Reactive", tagline: "Every cheer carries", powerName: "Resonance", power: "When a rival ahead of you rolls a 6, move 1. Your own 6 moves 2 more.", tune: { echo: 1, own: 2 } },
+  { id: "anchor-knight", name: "Anchor Knight", role: "Steady", tagline: "Never gives ground", powerName: "Iron Stride", power: "A roll of 1 counts as 3. Can't be pushed backward.", tune: { floor: 3, below: 2 } },
+  { id: "lantern-sprite", name: "Lantern Sprite", role: "Comeback", tagline: "Brightest from behind", powerName: "Catch-Up Glow", power: "Trailing everyone by 2 or more? Gain 1 for each runner ahead.", tune: { bonus: 1, gap: 2 } },
+  { id: "prism-slime", name: "Prism Slime", role: "Trickster", tagline: "Personal space is optional", powerName: "Slick Landing", power: "After you move, rivals within 3 spaces of you slide back 1.", tune: { range: 3, push: 1 } },
+  { id: "storm-crow", name: "Storm Crow", role: "Comeback", tagline: "Bad rolls summon good weather", powerName: "Thunder Jump", power: "On a 1 or 2, jump to the leader's space instead.", tune: { gap: 0, max: 2 } },
+  { id: "moon-moth", name: "Moon Moth", role: "Sprinter", tagline: "Odd numbers feel lucky", powerName: "Lunar Drift", power: "Odd rolls gain 1.", tune: { bonus: 1 } },
+  { id: "gear-goblin", name: "Gear Goblin", role: "Builder", tagline: "Always tuning something", powerName: "Tune-Up", power: "Each 1 you roll adds +1 to every later roll this race (max +3).", tune: { cap: 3, trigger: 1 } },
+  { id: "frost-yak", name: "Frost Yak", role: "Trickster", tagline: "A portable cold front", powerName: "Chill Field", power: "Rivals starting their turn within 3 spaces ahead of you lose 2.", tune: { range: 3, chill: 2 } },
+  { id: "portal-pup", name: "Portal Pup", role: "Pack", tagline: "Doors are everywhere", powerName: "Blink", power: "After landing on a rival, blink 3 more. Blinks can chain.", tune: { bonus: 3 } },
+  { id: "quake-beetle", name: "Quake Beetle", role: "Trickster", tagline: "Tiny feet, huge impact", powerName: "Ground Pound", power: "On a 4, 5 or 6, rivals within 4 spaces slide back 2.", tune: { range: 4, push: 2, min: 4 } },
+  { id: "lucky-turnip", name: "Lucky Turnip", role: "Wildcard", tagline: "Two is the luckiest number", powerName: "Lucky Two", power: "A roll of 2 counts as 5.", tune: { value: 5 } },
+  { id: "shadow-cat", name: "Shadow Cat", role: "Pack", tagline: "Crowds are shortcuts", powerName: "Slipstream", power: "The first 2 occupied spaces you cross each turn are free.", tune: { free: 2 } },
+  { id: "crown-crab", name: "Crown Crab", role: "Frontrunner", tagline: "First place is a lifestyle", powerName: "Royal Pace", power: "Gain 1 when you start within 4 spaces of the lead.", tune: { range: 4, bonus: 1 } },
+  { id: "nap-dragon", name: "Nap Dragon", role: "Wildcard", tagline: "Wakes up unpredictably", powerName: "Dream Die", power: "Roll an eight-sided die. After an 8, nap through your next turn.", tune: { nap: 8 } },
+  { id: "spark-snail", name: "Spark Snail", role: "Builder", tagline: "Charges between turns", powerName: "Stored Energy", power: "Every third turn, gain 2.", tune: { every: 3, bonus: 2 } },
+  { id: "wisp-twins", name: "Wisp Twins", role: "Wildcard", tagline: "One pushes, one pulls", powerName: "Alternating Current", power: "Gain 3 on odd turns. Lose 3 on even turns.", tune: { up: 3, down: 3 } },
+  { id: "river-otter", name: "River Otter", role: "Pack", tagline: "Momentum loves company", powerName: "Draft Current", power: "Gain 1 for each rival on your space or the next (max 2).", tune: { range: 1, max: 2 } },
+  { id: "meteor-mouse", name: "Meteor Mouse", role: "Comeback", tagline: "Small target, big launch", powerName: "Slingshot", power: "Starting 8 or more spaces behind the leader doubles your roll.", tune: { gap: 8 } },
+  { id: "mirror-owl", name: "Mirror Owl", role: "Reactive", tagline: "Watching closely", powerName: "Reflection", power: "If the runner before you rolled higher, gain the difference (max 2).", tune: { max: 2 } },
+  { id: "pepper-pixie", name: "Pepper Pixie", role: "Closer", tagline: "A little too energetic", powerName: "Spicy Finish", power: "The first time you cross space 20, surge 4.", tune: { at: 20, bonus: 4 } }
 ];
 
 const app = document.getElementById("app");
@@ -561,32 +528,72 @@ function renderPhaseFromState() {
   else renderSetup();
 }
 
-function updateSoundButton() {
-  soundButton.textContent = `Sound: ${audio.enabled ? "on" : "off"}`;
-  soundButton.setAttribute("aria-pressed", audio.enabled ? "true" : "false");
+// ---------------------------------------------------------------------------
+// Presentation helpers
+// ---------------------------------------------------------------------------
+
+const ROLE_NOTES = {
+  Steady: "Reliable movement with a small safety net.",
+  Sprinter: "Spikes of speed on good rolls.",
+  Trickster: "Pushes, slows or dodges other runners.",
+  Reactive: "Moves off what everyone else rolls.",
+  Comeback: "Gets stronger the further behind it falls.",
+  Builder: "Charges up over the course of a race.",
+  Pack: "Feeds on crowded spaces.",
+  Frontrunner: "Rewards staying near the lead.",
+  Wildcard: "Big swings, both ways.",
+  Closer: "Saves its burst for late in the race."
+};
+
+function portraitImg(racerId, className = "", alt = "") {
+  return window.RunnerArt ? RunnerArt.img(racerId, className, alt) : `<span class="runner-art ${className}"></span>`;
 }
+
+function racerTint(racerId) {
+  return window.RunnerArt ? RunnerArt.tint(racerId) : "#334";
+}
+
+function themeForRace(raceNumber) {
+  return ArcaneMaps.themeFor(raceNumber);
+}
+
+function isChaosRace(raceNumber) {
+  return raceNumber % 2 === 1;
+}
+
+function teamName(player) {
+  return escapeHtml(player?.name || "Team");
+}
+
+function updateSoundButton() {
+  soundButton.setAttribute("aria-pressed", audio.enabled ? "true" : "false");
+  soundButton.setAttribute("aria-label", audio.enabled ? "Sound on. Turn sound off" : "Sound off. Turn sound on");
+  soundButton.querySelector(".sound-label").textContent = audio.enabled ? "Sound on" : "Sound off";
+}
+
+let archiveRole = "All";
 
 function renderCharacterLibrary(filter = "") {
   const normalized = filter.trim().toLowerCase();
-  const matches = RACERS.filter((racer) => [racer.name, racer.tagline, racer.powerName, racer.power].join(" ").toLowerCase().includes(normalized));
-  characterGrid.innerHTML = matches.length ? matches.map((racer) => {
-    const index = RACERS.findIndex((item) => item.id === racer.id) + 1;
-    return `
-      <article class="archive-card">
-        <span class="archive-number">${String(index).padStart(2, "0")}</span>
-        <div class="racer-icon">${racer.icon}</div>
-        <h3>${racer.name}</h3>
-        <p class="tagline">${racer.tagline}</p>
-        <p class="power"><strong>${racer.powerName}:</strong> ${racer.power}</p>
-      </article>`;
-  }).join("") : `<p class="sidebar-note">No runners match that search.</p>`;
+  const roles = ["All", ...new Set(RACERS.map((racer) => racer.role))];
+  const roleBar = document.getElementById("archiveRoles");
+  roleBar.innerHTML = roles.map((role) => `<button type="button" class="chip-button ${role === archiveRole ? "is-on" : ""}" data-role="${role}" aria-pressed="${role === archiveRole}">${role}</button>`).join("");
+  roleBar.querySelectorAll("[data-role]").forEach((button) => button.addEventListener("click", () => {
+    archiveRole = button.dataset.role;
+    renderCharacterLibrary(characterSearch.value);
+  }));
+  const matches = RACERS.filter((racer) => (archiveRole === "All" || racer.role === archiveRole)
+    && [racer.name, racer.tagline, racer.powerName, racer.power, racer.role].join(" ").toLowerCase().includes(normalized));
+  characterGrid.innerHTML = matches.length
+    ? matches.map((racer) => runnerCardHtml(racer, { as: "article" })).join("")
+    : `<p class="empty-note">No runners match that search.</p>`;
 }
 
 function openCharacters() {
   characterSearch.value = "";
+  archiveRole = "All";
   renderCharacterLibrary();
   charactersDialog.showModal();
-  window.setTimeout(() => characterSearch.focus(), 0);
 }
 
 document.getElementById("rulesButton").addEventListener("click", () => rulesDialog.showModal());
@@ -596,8 +603,60 @@ document.getElementById("closeCharactersButton").addEventListener("click", () =>
 characterSearch.addEventListener("input", () => renderCharacterLibrary(characterSearch.value));
 soundButton.addEventListener("click", () => audio.toggle());
 document.addEventListener("pointerdown", () => audio.ensure(), { once: true });
+[rulesDialog, charactersDialog].forEach((dialog) => dialog.addEventListener("click", (event) => {
+  if (event.target === dialog) dialog.close();
+}));
 updateSoundButton();
-renderCharacterLibrary();
+
+document.addEventListener("keydown", (event) => {
+  if (state.phase !== "race" || event.repeat) return;
+  if (event.key !== " " && event.key.toLowerCase() !== "r") return;
+  const target = event.target;
+  if (target && (target.closest?.("input, select, textarea, button, dialog[open]") || target.isContentEditable)) return;
+  const button = document.getElementById("rollButton");
+  if (button && !button.disabled) {
+    event.preventDefault();
+    button.click();
+  }
+});
+
+function runnerCardHtml(racer, options = {}) {
+  const tag = options.as || "button";
+  const attrs = options.action === "draft" ? `data-draft-id="${racer.id}"` : options.action === "select" ? `data-select-id="${racer.id}"` : "";
+  const classNames = ["runner-card", options.used ? "is-used" : "", options.compact ? "is-compact" : ""].filter(Boolean).join(" ");
+  const disabled = tag === "button" && options.disabled ? "disabled" : "";
+  return `
+    <${tag} class="${classNames}" ${tag === "button" ? 'type="button"' : ""} ${attrs} ${disabled} style="--tint:${racerTint(racer.id)}">
+      <span class="runner-card-top">
+        ${portraitImg(racer.id, "runner-card-art", "")}
+        <span class="role-chip" title="${ROLE_NOTES[racer.role] || ""}">${racer.role}</span>
+      </span>
+      <span class="runner-card-name">${racer.name}</span>
+      <span class="runner-card-tag">${racer.tagline}</span>
+      <span class="runner-card-power"><b>${racer.powerName}</b> ${racer.power}</span>
+    </${tag}>`;
+}
+
+function teamSlotsHtml(player, options = {}) {
+  const slots = Array.from({ length: 4 }, (_, index) => player.team[index]);
+  return `<span class="team-slots">${slots.map((slot) => slot
+    ? `<span class="team-slot ${options.showUsed && slot.used ? "is-used" : ""}" title="${racerById(slot.racerId).name}${slot.used ? " (raced)" : ""}">${portraitImg(slot.racerId, "", racerById(slot.racerId).name)}</span>`
+    : `<span class="team-slot is-empty"></span>`).join("")}</span>`;
+}
+
+function teamRowHtml(player, options = {}) {
+  return `
+    <li class="team-row ${options.active ? "is-active" : ""}" style="--team:${player.color}">
+      <span class="team-swatch"></span>
+      <span class="team-row-name">${teamName(player)}${player.isBot ? ' <span class="bot-tag">Bot</span>' : ""}</span>
+      ${options.score ? `<span class="team-row-score">${player.score}<small>pts</small></span>` : `<span class="team-row-count">${player.team.length}/4</span>`}
+      ${teamSlotsHtml(player, options)}
+    </li>`;
+}
+
+// ---------------------------------------------------------------------------
+// Setup and lobby
+// ---------------------------------------------------------------------------
 
 function lobbyCodeFromUrl() {
   if (typeof URLSearchParams === "undefined") return "";
@@ -606,87 +665,84 @@ function lobbyCodeFromUrl() {
 
 let setupMode = lobbyCodeFromUrl() ? "join" : "local";
 
+function heroBoardHtml() {
+  const demo = [["comet-kid", 9, 0], ["bubble-witch", 7, 1], ["moss-golem", 7, 2], ["nap-dragon", 4, 3]];
+  const tokens = demo.map(([id, space, team], index) => {
+    const [x, y] = ArcaneMaps.spacePoint(space, false);
+    const shared = demo.filter((entry) => entry[1] === space);
+    const offset = stackOffsets(shared.length)[shared.findIndex((entry) => entry[0] === id)];
+    return `<span class="token is-static" style="--x:${x + offset[0]};--y:${y + offset[1]};--team:${PLAYER_COLORS[team]};--delay:${index * 90}ms"><span class="token-body">${portraitImg(id)}</span></span>`;
+  }).join("");
+  return `<div class="board hero-board" style="--u:0.1cqw" aria-hidden="true"><div class="board-map">${ArcaneMaps.boardSvg(0, { idPrefix: "hero" })}</div><div class="board-tokens">${tokens}</div></div>`;
+}
+
 function renderSetup() {
   state.phase = "setup";
   state.busy = false;
   const lobbyCode = lobbyCodeFromUrl();
   const serverNote = network.supported
-    ? "Online server connected. Players can join from any internet connection."
-    : "Online lobbies require this game to be served by the included Node server.";
+    ? ""
+    : "Online lobbies need the game to run on its Node server. Local play works anywhere.";
   app.innerHTML = `
-    <section class="hero-grid">
-      <div class="panel hero-copy">
-        <p class="eyebrow">Draft, race, disrupt</p>
-        <h2>Build a strange team and survive four chaotic races.</h2>
-        <p>Play on one screen, or create an online lobby that friends can join from their own devices.</p>
-        <div class="feature-row">
-          <div class="feature"><strong>4</strong><span>runners per team</span></div>
-          <div class="feature"><strong>4</strong><span>escalating races</span></div>
-          <div class="feature"><strong>ONLINE</strong><span>join from anywhere</span></div>
-        </div>
-        <div class="hero-actions">
-          <button id="browseRunnersButton" class="ghost-button" type="button">Browse all 24 runners</button>
-        </div>
-        <div class="notice">${network.notice || serverNote}</div>
+    <section class="setup-screen">
+      <div class="hero-copy">
+        <h2 class="hero-title">Draft a team of misfits. Race them for the league title.</h2>
+        <p class="hero-lede">Each team drafts four runners and sends one into each of four races. Finish first or second to score, and the later races pay more.</p>
       </div>
-      <div class="panel setup-panel">
-        <div>
-          <p class="eyebrow">Game mode</p>
-          <h2>Start or join</h2>
-        </div>
+      ${heroBoardHtml()}
+      <div class="setup-side">
+      <div class="panel setup-card">
         <div class="mode-tabs" role="tablist" aria-label="Game mode">
-          <button class="mode-tab ${setupMode === "local" ? "active" : ""}" data-setup-mode="local" type="button">Local</button>
-          <button class="mode-tab ${setupMode === "create" ? "active" : ""}" data-setup-mode="create" type="button" ${network.supported ? "" : "disabled"}>Create lobby</button>
-          <button class="mode-tab ${setupMode === "join" ? "active" : ""}" data-setup-mode="join" type="button" ${network.supported ? "" : "disabled"}>Join lobby</button>
+          ${[["local", "Same screen"], ["create", "Host online"], ["join", "Join online"]].map(([mode, label]) => `
+            <button class="mode-tab ${setupMode === mode ? "is-on" : ""}" role="tab" aria-selected="${setupMode === mode}" data-setup-mode="${mode}" type="button" ${mode !== "local" && !network.supported ? "disabled" : ""}>${label}</button>`).join("")}
         </div>
 
-        <div id="localSetup" class="setup-mode" ${setupMode === "local" ? "" : "hidden"}>
-          <div class="form-row">
-            <label for="playerCount">Number of teams</label>
-            <select id="playerCount">
-              <option value="2">2 teams</option>
-              <option value="3" selected>3 teams</option>
-              <option value="4">4 teams</option>
-            </select>
+        <div class="setup-mode" ${setupMode === "local" ? "" : "hidden"}>
+          <div class="field">
+            <span class="field-label" id="teamCountLabel">Teams</span>
+            <div class="segmented" role="radiogroup" aria-labelledby="teamCountLabel">
+              ${[2, 3, 4].map((count) => `<button type="button" role="radio" class="segment ${localTeamCount === count ? "is-on" : ""}" aria-checked="${localTeamCount === count}" data-team-count="${count}">${count}</button>`).join("")}
+            </div>
           </div>
-          <div id="playerConfigList" class="player-config-list"></div>
-          <button id="startButton" class="primary-button" type="button">Start local draft</button>
+          <ul id="playerConfigList" class="player-config-list"></ul>
+          <button id="startButton" class="btn btn-primary btn-block" type="button">Start the draft</button>
         </div>
 
-        <div id="createSetup" class="setup-mode" ${setupMode === "create" ? "" : "hidden"}>
-          <div class="form-row">
-            <label for="createPlayerName">Your team name</label>
-            <input id="createPlayerName" maxlength="18" value="Host Team" autocomplete="nickname" />
-          </div>
-          <div class="form-row">
-            <label for="lobbySize">Maximum teams</label>
-            <select id="lobbySize">
-              <option value="2">2 teams</option>
-              <option value="3">3 teams</option>
-              <option value="4" selected>4 teams</option>
-            </select>
+        <div class="setup-mode" ${setupMode === "create" ? "" : "hidden"}>
+          <label class="field" for="createPlayerName"><span class="field-label">Your team name</span>
+            <input id="createPlayerName" maxlength="18" value="Host Team" autocomplete="nickname" /></label>
+          <div class="field">
+            <span class="field-label" id="lobbySizeLabel">Seats</span>
+            <div class="segmented" role="radiogroup" aria-labelledby="lobbySizeLabel">
+              ${[2, 3, 4].map((count) => `<button type="button" role="radio" class="segment ${lobbySeats === count ? "is-on" : ""}" aria-checked="${lobbySeats === count}" data-lobby-size="${count}">${count}</button>`).join("")}
+            </div>
           </div>
           <label class="check-row" for="fillBots">
             <input id="fillBots" type="checkbox" />
-            <span>Fill empty seats with bots when the host starts</span>
+            <span>Fill empty seats with bots when you start</span>
           </label>
-          <button id="createLobbyButton" class="primary-button" type="button">Create online lobby</button>
-          <p class="sidebar-note">The creator's browser is the game authority. Keep the host browser open while the match is running.</p>
+          <button id="createLobbyButton" class="btn btn-primary btn-block" type="button">Create lobby</button>
+          <p class="fine-print">Your browser runs the match, so keep this tab open until the final race.</p>
         </div>
 
-        <div id="joinSetup" class="setup-mode" ${setupMode === "join" ? "" : "hidden"}>
-          <div class="form-row">
-            <label for="joinPlayerName">Your team name</label>
-            <input id="joinPlayerName" maxlength="18" value="Guest Team" autocomplete="nickname" />
-          </div>
-          <div class="form-row">
-            <label for="joinLobbyCode">Lobby code</label>
-            <input id="joinLobbyCode" class="code-input" maxlength="5" value="${lobbyCode.toUpperCase()}" placeholder="ABCDE" autocomplete="off" />
-          </div>
-          <button id="joinLobbyButton" class="primary-button" type="button">Join lobby</button>
-          <p class="sidebar-note">Open this public game site, then enter the five-character lobby code.</p>
+        <div class="setup-mode" ${setupMode === "join" ? "" : "hidden"}>
+          <label class="field" for="joinPlayerName"><span class="field-label">Your team name</span>
+            <input id="joinPlayerName" maxlength="18" value="Guest Team" autocomplete="nickname" /></label>
+          <label class="field" for="joinLobbyCode"><span class="field-label">Lobby code</span>
+            <input id="joinLobbyCode" class="code-input" maxlength="5" value="${escapeHtml(lobbyCode.toUpperCase())}" placeholder="ABCDE" autocomplete="off" inputmode="text" /></label>
+          <button id="joinLobbyButton" class="btn btn-primary btn-block" type="button">Join lobby</button>
         </div>
-        <p id="networkStatus" class="network-status" aria-live="polite"></p>
+        <p id="networkStatus" class="network-status" aria-live="polite">${escapeHtml(network.notice || serverNote)}</p>
+      </div>
+      <section class="roster-wall" aria-labelledby="rosterTitle">
+        <div class="roster-wall-head">
+          <h3 class="side-title" id="rosterTitle">This season's runners</h3>
+          <button id="browseRunnersButton" class="btn btn-quiet" type="button">See all powers</button>
+        </div>
+        <div class="roster-grid">
+          ${RACERS.map((racer) => `<button type="button" class="roster-face" data-runner="${racer.id}" title="${racer.name}: ${racer.powerName}" aria-label="${racer.name}">${portraitImg(racer.id)}</button>`).join("")}
+        </div>
+      </section>
       </div>
     </section>`;
 
@@ -697,12 +753,29 @@ function renderSetup() {
     });
   });
   document.getElementById("browseRunnersButton").addEventListener("click", openCharacters);
+  document.querySelectorAll("[data-runner]").forEach((button) => button.addEventListener("click", () => {
+    openCharacters();
+    characterSearch.value = racerById(button.dataset.runner).name;
+    renderCharacterLibrary(characterSearch.value);
+  }));
 
-  const playerCount = document.getElementById("playerCount");
-  if (playerCount) {
-    playerCount.addEventListener("change", renderPlayerConfig);
-    document.getElementById("startButton").addEventListener("click", startGame);
+  document.querySelectorAll("[data-team-count]").forEach((button) => button.addEventListener("click", () => {
+    captureLocalConfig();
+    localTeamCount = Number(button.dataset.teamCount);
+    renderSetup();
+  }));
+  document.querySelectorAll("[data-lobby-size]").forEach((button) => button.addEventListener("click", () => {
+    lobbySeats = Number(button.dataset.lobbySize);
+    document.querySelectorAll("[data-lobby-size]").forEach((other) => {
+      other.classList.toggle("is-on", other === button);
+      other.setAttribute("aria-checked", other === button ? "true" : "false");
+    });
+  }));
+
+  const startButton = document.getElementById("startButton");
+  if (startButton) {
     renderPlayerConfig();
+    startButton.addEventListener("click", startGame);
   }
 
   const createButton = document.getElementById("createLobbyButton");
@@ -710,11 +783,7 @@ function renderSetup() {
     setNetworkStatus("Creating lobby...");
     createButton.disabled = true;
     try {
-      await network.createLobby(
-        document.getElementById("createPlayerName").value,
-        Number(document.getElementById("lobbySize").value),
-        document.getElementById("fillBots").checked
-      );
+      await network.createLobby(document.getElementById("createPlayerName").value, lobbySeats, document.getElementById("fillBots").checked);
     } catch (error) {
       setNetworkStatus(error.message, true);
       createButton.disabled = false;
@@ -744,26 +813,47 @@ function renderSetup() {
   });
 }
 
+let localTeamCount = 3;
+let lobbySeats = 4;
+const localConfig = [
+  { name: "You", bot: false },
+  { name: "Team 2", bot: true },
+  { name: "Team 3", bot: true },
+  { name: "Team 4", bot: true }
+];
+
+function captureLocalConfig() {
+  localConfig.forEach((entry, index) => {
+    const input = document.getElementById(`playerName${index}`);
+    if (input) entry.name = input.value;
+  });
+}
+
 function setNetworkStatus(message, isError = false) {
   const element = document.getElementById("networkStatus");
   if (!element) return;
   element.textContent = message;
-  element.classList.toggle("error", isError);
+  element.classList.toggle("is-error", isError);
 }
 
 function renderPlayerConfig() {
-  const countElement = document.getElementById("playerCount");
   const list = document.getElementById("playerConfigList");
-  if (!countElement || !list) return;
-  const count = Number(countElement.value);
-  list.innerHTML = Array.from({ length: count }, (_, index) => `
-    <div class="player-config">
-      <input id="playerName${index}" maxlength="18" value="${index === 0 ? "You" : `Team ${index + 1}`}" aria-label="Team ${index + 1} name" />
-      <select id="playerType${index}" aria-label="Team ${index + 1} control type">
-        <option value="human" ${index === 0 ? "selected" : ""}>Human</option>
-        <option value="bot" ${index > 0 ? "selected" : ""}>Bot</option>
-      </select>
-    </div>`).join("");
+  if (!list) return;
+  list.innerHTML = Array.from({ length: localTeamCount }, (_, index) => {
+    const entry = localConfig[index];
+    return `
+      <li class="player-config" style="--team:${PLAYER_COLORS[index]}">
+        <span class="team-swatch"></span>
+        <input id="playerName${index}" maxlength="18" value="${escapeHtml(entry.name)}" aria-label="Team ${index + 1} name" />
+        <button type="button" class="control-toggle ${entry.bot ? "is-bot" : ""}" data-control="${index}" aria-label="Team ${index + 1} is ${entry.bot ? "a bot" : "human"}. Switch">${entry.bot ? "Bot" : "Human"}</button>
+      </li>`;
+  }).join("");
+  list.querySelectorAll("[data-control]").forEach((button) => button.addEventListener("click", () => {
+    captureLocalConfig();
+    const entry = localConfig[Number(button.dataset.control)];
+    entry.bot = !entry.bot;
+    renderPlayerConfig();
+  }));
 }
 
 function renderLobby() {
@@ -773,63 +863,50 @@ function renderLobby() {
     renderSetup();
     return;
   }
-  const shareUrls = lobby.joinUrl ? [lobby.joinUrl] : [`${browserLocation.origin}/?lobby=${lobby.code}`];
+  const shareUrl = lobby.joinUrl || `${browserLocation.origin}/?lobby=${lobby.code}`;
   const canStart = network.isHost && (lobby.members.length >= 2 || lobby.fillBots);
   app.innerHTML = `
-    <section class="panel lobby-panel">
-      <div class="phase-head">
+    <section class="panel lobby-screen">
+      <div class="lobby-head">
         <div>
-          <p class="eyebrow">Online lobby</p>
-          <h2>${network.isHost ? "Your lobby is ready" : "Waiting for the host"}</h2>
-          <p>Players can join through the public game URL from any modern browser.</p>
+          <h2 class="screen-title">${network.isHost ? "Your lobby is open" : "You're in"}</h2>
+          <p class="screen-sub">${network.isHost ? "Share the code or link. Start when everyone is seated." : "The host starts the league when everyone is seated."}</p>
         </div>
-        <div class="lobby-code" aria-label="Lobby code ${lobby.code}">${lobby.code}</div>
+        <div class="lobby-code" aria-label="Lobby code ${lobby.code}"><small>Code</small>${lobby.code}</div>
       </div>
-      <div class="lobby-layout">
-        <div>
-          <div class="share-box">
-            <label for="shareUrlSelect">Share this lobby link</label>
-            <select id="shareUrlSelect">
-              ${shareUrls.map((url) => `<option value="${url}">${url}</option>`).join("")}
-            </select>
-            <button id="copyLobbyLinkButton" class="small-button" type="button">Copy invite link</button>
-          </div>
-          <div class="member-list">
-            ${lobby.members.map((member, index) => `
-              <div class="member-row">
-                <span class="member-color" style="--member-color:${PLAYER_COLORS[index]}"></span>
-                <div><strong>${member.name}</strong><span>${member.isHost ? "Host" : "Player"}${member.connected ? " · connected" : " · reconnecting"}</span></div>
-                <span class="member-seat">Seat ${index + 1}</span>
-              </div>`).join("")}
-            ${Array.from({ length: Math.max(0, lobby.maxPlayers - lobby.members.length) }, (_, index) => `
-              <div class="member-row empty">
-                <span class="member-color"></span>
-                <div><strong>Open seat</strong><span>${lobby.fillBots ? "Bot fills on start" : "Waiting for player"}</span></div>
-                <span class="member-seat">Seat ${lobby.members.length + index + 1}</span>
-              </div>`).join("")}
-          </div>
-        </div>
-        <aside class="lobby-actions">
-          <div class="connection-card">
-            <p class="eyebrow">Host model</p>
-            <strong>${network.isHost ? "This browser runs the game" : "The lobby creator runs the game"}</strong>
-            <p>Draft picks and turns travel through the online server, then synchronize to every screen.</p>
-          </div>
-          ${network.isHost ? `<button id="startLobbyGameButton" class="primary-button" type="button" ${canStart ? "" : "disabled"}>Start game</button>` : `<div class="waiting-pulse">Waiting for host to start...</div>`}
-          <button id="leaveLobbyButton" class="ghost-button" type="button">Leave lobby</button>
-          ${network.notice ? `<p class="network-status error">${network.notice}</p>` : ""}
-        </aside>
+      <div class="share-row">
+        <input id="shareUrl" readonly value="${escapeHtml(shareUrl)}" aria-label="Invite link" />
+        <button id="copyLobbyLinkButton" class="btn btn-secondary" type="button">Copy link</button>
       </div>
+      <ol class="seat-list">
+        ${lobby.members.map((member, index) => `
+          <li class="seat" style="--team:${PLAYER_COLORS[index]}">
+            <span class="team-swatch"></span>
+            <span class="seat-name">${escapeHtml(member.name)}${member.clientId === network.clientId ? " <small>(you)</small>" : ""}</span>
+            <span class="seat-state ${member.connected ? "" : "is-off"}">${member.isHost ? "Host" : member.connected ? "Ready" : "Reconnecting"}</span>
+          </li>`).join("")}
+        ${Array.from({ length: Math.max(0, lobby.maxPlayers - lobby.members.length) }, (_, index) => `
+          <li class="seat is-open" style="--team:${PLAYER_COLORS[lobby.members.length + index]}">
+            <span class="team-swatch"></span>
+            <span class="seat-name">Open seat</span>
+            <span class="seat-state">${lobby.fillBots ? "Bot on start" : "Waiting"}</span>
+          </li>`).join("")}
+      </ol>
+      <div class="lobby-actions">
+        ${network.isHost ? `<button id="startLobbyGameButton" class="btn btn-primary" type="button" ${canStart ? "" : "disabled"}>Start the league</button>` : `<p class="waiting-note">Waiting for the host to start</p>`}
+        <button id="leaveLobbyButton" class="btn btn-quiet" type="button">Leave lobby</button>
+      </div>
+      ${network.notice ? `<p class="network-status is-error">${escapeHtml(network.notice)}</p>` : ""}
     </section>`;
 
   document.getElementById("copyLobbyLinkButton").addEventListener("click", async () => {
     const button = document.getElementById("copyLobbyLinkButton");
     try {
-      const selectedUrl = document.getElementById("shareUrlSelect").value;
-      await navigator.clipboard.writeText(selectedUrl);
+      await navigator.clipboard.writeText(shareUrl);
       button.textContent = "Copied";
     } catch (error) {
-      button.textContent = "Copy unavailable";
+      document.getElementById("shareUrl").select();
+      button.textContent = "Press Ctrl+C";
     }
   });
   document.getElementById("leaveLobbyButton").addEventListener("click", () => network.leave());
@@ -855,15 +932,7 @@ async function startHostedGame() {
     if (lobby.fillBots) {
       while (state.players.length < lobby.maxPlayers) {
         const index = state.players.length;
-        state.players.push({
-          id: `p${index}`,
-          name: `Bot Team ${index + 1}`,
-          isBot: true,
-          controllerId: null,
-          color: PLAYER_COLORS[index],
-          team: [],
-          score: 0
-        });
+        state.players.push({ id: `p${index}`, name: `Bot ${index + 1}`, isBot: true, controllerId: null, color: PLAYER_COLORS[index], team: [], score: 0 });
       }
     }
     state.deck = shuffle(RACERS);
@@ -878,11 +947,11 @@ async function startHostedGame() {
 function startGame() {
   audio.ensure();
   audio.playUi();
-  const count = Number(document.getElementById("playerCount").value);
-  state.players = Array.from({ length: count }, (_, index) => ({
+  captureLocalConfig();
+  state.players = Array.from({ length: localTeamCount }, (_, index) => ({
     id: `p${index}`,
-    name: document.getElementById(`playerName${index}`).value.trim() || `Team ${index + 1}`,
-    isBot: document.getElementById(`playerType${index}`).value === "bot",
+    name: localConfig[index].name.trim() || `Team ${index + 1}`,
+    isBot: localConfig[index].bot,
     controllerId: null,
     color: PLAYER_COLORS[index],
     team: [],
@@ -893,6 +962,10 @@ function startGame() {
   beginDraftWave();
 }
 
+// ---------------------------------------------------------------------------
+// Draft
+// ---------------------------------------------------------------------------
+
 function makeSnakeOrder(startIndex) {
   const count = state.players.length;
   const forward = Array.from({ length: count }, (_, index) => (startIndex + index) % count);
@@ -901,7 +974,7 @@ function makeSnakeOrder(startIndex) {
 
 function beginDraftWave() {
   const startIndex = state.draftWave === 1 ? 0 : 1 % state.players.length;
-  state.draftPool = state.deck.splice(0, state.players.length * 2);
+  state.draftPool = state.deck.splice(0, state.players.length * 2 + 1);
   state.draftOrder = makeSnakeOrder(startIndex);
   state.draftIndex = 0;
   state.phase = "draft";
@@ -909,57 +982,41 @@ function beginDraftWave() {
   maybeRunBotDraft();
 }
 
+function turnHeadline(player, verb) {
+  if (canControlPlayer(player)) return `${teamName(player)}, ${verb}`;
+  if (player.isBot) return `${teamName(player)} is choosing`;
+  return `Waiting for ${teamName(player)}`;
+}
+
 function renderDraft() {
   const player = currentDraftPlayer();
+  const controllable = canControlPlayer(player);
   app.innerHTML = `
-    <section class="panel">
-      <div class="phase-head">
+    <section class="phase-screen">
+      <header class="phase-head" style="--team:${player.color}">
         <div>
-          <p class="eyebrow">Draft wave ${state.draftWave} of 2</p>
-          <h2>${player.name} chooses next</h2>
-          <p>Select one runner from the open pool. Each team receives two runners per wave.</p>
+          <p class="phase-step">Draft · wave ${state.draftWave} of 2 · pick ${state.draftIndex + 1} of ${state.draftOrder.length}</p>
+          <h2 class="screen-title"><span class="team-swatch"></span>${turnHeadline(player, "pick a runner")}</h2>
         </div>
-        <div class="status-pill">Pick ${state.draftIndex + 1} of ${state.draftOrder.length}</div>
-      </div>
-      <div class="draft-layout">
-        <div class="racer-grid">
-          ${state.draftPool.map((racer) => racerCardHtml(racer, { disabled: !canControlPlayer(player), action: "draft" })).join("")}
+        <p class="phase-aside">Snake order: the pass reverses after every team.</p>
+      </header>
+      <div class="phase-layout">
+        <div class="card-grid ${controllable ? "" : "is-watching"}">
+          ${state.draftPool.map((racer) => runnerCardHtml(racer, { disabled: !controllable, action: "draft" })).join("")}
         </div>
-        <aside>
-          <div class="team-list">
-            ${state.players.map((team) => teamBoxHtml(team, team.id === player.id)).join("")}
-          </div>
-          <p class="sidebar-note">The draft order reverses after every pass. The second wave starts with the next team.</p>
+        <aside class="panel side-panel">
+          <h3 class="side-title">Teams</h3>
+          <ol class="team-list">${state.players.map((team) => teamRowHtml(team, { active: team.id === player.id })).join("")}</ol>
         </aside>
       </div>
     </section>`;
 
-  if (canControlPlayer(player)) {
+  if (controllable) {
     document.querySelectorAll("[data-draft-id]").forEach((button) => {
       button.addEventListener("click", () => requestDraftRacer(button.dataset.draftId));
     });
   }
   network.broadcastState();
-}
-
-function racerCardHtml(racer, options = {}) {
-  const attrs = options.action === "draft" ? `data-draft-id="${racer.id}"` : options.action === "select" ? `data-select-id="${racer.id}"` : "";
-  const classNames = ["racer-card", options.used ? "used" : "", options.selected ? "selected" : ""].filter(Boolean).join(" ");
-  return `
-    <button class="${classNames}" type="button" ${attrs} ${options.disabled ? "disabled" : ""}>
-      <div class="racer-icon">${racer.icon}</div>
-      <h3>${racer.name}</h3>
-      <p class="tagline">${racer.tagline}</p>
-      <p class="power"><strong>${racer.powerName}:</strong> ${racer.power}</p>
-    </button>`;
-}
-
-function teamBoxHtml(player, active = false) {
-  return `
-    <div class="team-box ${active ? "active" : ""}">
-      <div class="team-title"><strong style="color:${player.color}">${player.name}</strong><span>${player.team.length}/4</span></div>
-      <div class="team-icons">${player.team.length ? player.team.map((slot) => `<span class="team-icon" title="${racerById(slot.racerId).name}">${racerById(slot.racerId).icon}</span>`).join("") : "<span class=\"sidebar-note\">No runners yet</span>"}</div>
-    </div>`;
 }
 
 function chooseDraftRacer(racerId) {
@@ -972,6 +1029,7 @@ function chooseDraftRacer(racerId) {
   state.draftIndex += 1;
 
   if (state.draftIndex >= state.draftOrder.length) {
+    state.deck.push(...state.draftPool);
     if (state.draftWave === 1) {
       state.draftWave = 2;
       beginDraftWave();
@@ -991,10 +1049,20 @@ function maybeRunBotDraft() {
   const player = currentDraftPlayer();
   if (!player || !player.isBot) return;
   window.setTimeout(() => {
-    const ranked = [...state.draftPool].sort((a, b) => (b.rating + Math.random() * 1.8) - (a.rating + Math.random() * 1.8));
-    chooseDraftRacer(ranked[0].id);
-  }, 500);
+    if (state.phase !== "draft" || currentDraftPlayer() !== player) return;
+    chooseDraftRacer(botDraftChoice(player).id);
+  }, 650);
 }
+
+function botDraftChoice(player) {
+  const roles = new Set(player.team.map((slot) => racerById(slot.racerId).role));
+  const ranked = shuffle(state.draftPool).sort((a, b) => Number(roles.has(a.role)) - Number(roles.has(b.role)));
+  return ranked[0];
+}
+
+// ---------------------------------------------------------------------------
+// Race selection
+// ---------------------------------------------------------------------------
 
 function beginRaceSelection() {
   state.phase = "selection";
@@ -1019,41 +1087,51 @@ function beginRaceSelection() {
 
 function renderSelection() {
   const player = currentSelectionPlayer();
-  const trackName = state.raceNumber % 2 === 0 ? "Calm Course" : "Chaos Circuit";
+  const controllable = canControlPlayer(player);
+  const theme = themeForRace(state.raceNumber);
+  const chaos = isChaosRace(state.raceNumber);
   const points = RACE_POINTS[state.raceNumber];
   const available = player.team.filter((slot) => !slot.used);
+  const picked = state.entrants.map((entrant) => `<li style="--team:${playerById(entrant.playerId).color}">${portraitImg(entrant.racerId, "", racerById(entrant.racerId).name)}<span>${teamName(playerById(entrant.playerId))}</span></li>`).join("");
 
   app.innerHTML = `
-    <section class="panel">
-      <div class="phase-head">
+    <section class="phase-screen">
+      <header class="phase-head" style="--team:${player.color}">
         <div>
-          <p class="eyebrow">Race ${state.raceNumber + 1} of 4</p>
-          <h2>${player.name}, choose a runner</h2>
-          <p>${trackName}. First place scores ${points[0]}, second place scores ${points[1]}.</p>
+          <p class="phase-step">Race ${state.raceNumber + 1} of 4 · lineup ${state.selectionIndex + 1} of ${state.players.length}</p>
+          <h2 class="screen-title"><span class="team-swatch"></span>${turnHeadline(player, "who runs this one?")}</h2>
         </div>
-        <div class="status-pill">${state.selectionIndex + 1}/${state.players.length} selected</div>
-      </div>
-      <div class="selection-layout">
-        <div class="racer-grid">
-          ${available.map((slot) => racerCardHtml(racerById(slot.racerId), { disabled: !canControlPlayer(player), action: "select" })).join("")}
+        <p class="phase-aside">Each runner races once. Save strong picks for the bigger races.</p>
+      </header>
+      <div class="phase-layout">
+        <div>
+          <div class="next-track">
+            <div class="next-track-map">${ArcaneMaps.boardSvg(state.raceNumber, { chaosSpaces: chaos ? CHAOS_SPACES : {}, idPrefix: "pv" })}</div>
+            <div class="next-track-copy">
+              <span class="mood-tag ${chaos ? "is-chaos" : ""}">${chaos ? "Chaos track" : "Calm track"}</span>
+              <h3>${theme.name}</h3>
+              <p>${theme.blurb}</p>
+              <p class="stakes"><span class="medal is-gold">1st</span> +${points[0]} <span class="medal is-silver">2nd</span> +${points[1]}</p>
+              ${picked ? `<ul class="picked-list" aria-label="Already entered">${picked}</ul>` : ""}
+            </div>
+          </div>
+          <div class="card-grid ${controllable ? "" : "is-watching"}">
+            ${available.map((slot) => runnerCardHtml(racerById(slot.racerId), { disabled: !controllable, action: "select" })).join("")}
+          </div>
         </div>
-        <aside>
-          <div class="score-list">${state.players.map((team) => scoreBoxHtml(team, team.id === player.id)).join("")}</div>
-          <p class="sidebar-note">Each runner may enter only one race. Later races award more points.</p>
+        <aside class="panel side-panel">
+          <h3 class="side-title">League table</h3>
+          <ol class="team-list">${[...state.players].sort((a, b) => b.score - a.score).map((team) => teamRowHtml(team, { active: team.id === player.id, score: true, showUsed: true })).join("")}</ol>
         </aside>
       </div>
     </section>`;
 
-  if (canControlPlayer(player)) {
+  if (controllable) {
     document.querySelectorAll("[data-select-id]").forEach((button) => {
       button.addEventListener("click", () => requestRaceRacer(button.dataset.selectId));
     });
   }
   network.broadcastState();
-}
-
-function scoreBoxHtml(player, active = false) {
-  return `<div class="score-box ${active ? "active" : ""}"><div class="team-title"><strong style="color:${player.color}">${player.name}</strong><strong>${player.score} pts</strong></div><div class="team-icons">${player.team.map((slot) => `<span class="team-icon" style="opacity:${slot.used ? 0.35 : 1}" title="${racerById(slot.racerId).name}">${racerById(slot.racerId).icon}</span>`).join("")}</div></div>`;
 }
 
 function chooseRaceRacer(racerId) {
@@ -1071,7 +1149,9 @@ function chooseRaceRacer(racerId) {
     finishPlace: null,
     turns: 0,
     usedReroll: false,
-    crossedTwenty: false
+    crossedTwenty: false,
+    napping: false,
+    charge: 0
   });
   state.selectionIndex += 1;
 
@@ -1089,195 +1169,370 @@ function maybeRunBotSelection() {
   const player = currentSelectionPlayer();
   if (!player || !player.isBot) return;
   window.setTimeout(() => {
+    if (state.phase !== "selection" || currentSelectionPlayer() !== player) return;
     const available = player.team.filter((slot) => !slot.used).map((slot) => racerById(slot.racerId));
-    const raceWeight = state.raceNumber / 3;
-    const ranked = [...available].sort((a, b) => ((b.rating * (0.75 + raceWeight * 0.25)) + Math.random() * 1.4) - ((a.rating * (0.75 + raceWeight * 0.25)) + Math.random() * 1.4));
+    const chaosFans = ["bubble-witch", "anchor-knight"];
+    const chaos = isChaosRace(state.raceNumber);
+    const ranked = shuffle(available).sort((a, b) => {
+      const score = (racer) => (chaosFans.includes(racer.id) ? (chaos ? 1 : -1) : 0);
+      return score(b) - score(a);
+    });
     chooseRaceRacer(ranked[0].id);
-  }, 550);
+  }, 650);
 }
 
 function startRace() {
   state.phase = "race";
   state.turnOrder = Array.from({ length: state.players.length }, (_, index) => (state.raceNumber + index) % state.players.length).map((index) => state.players[index].id);
   state.turnIndex = 0;
-  addLog(`Race ${state.raceNumber + 1} begins on the ${state.raceNumber % 2 === 0 ? "Calm Course" : "Chaos Circuit"}.`);
+  addLog(`Race ${state.raceNumber + 1} starts at ${themeForRace(state.raceNumber).name}.`);
   renderRace();
   maybeRunBotTurn();
 }
 
+// ---------------------------------------------------------------------------
+// Race view: mounted once per race, then patched in place so tokens glide.
+// ---------------------------------------------------------------------------
+
+const portraitQuery = typeof window.matchMedia === "function" ? window.matchMedia("(max-width: 700px)") : { matches: false, addEventListener() {} };
+let raceView = null;
+
+if (portraitQuery.addEventListener) {
+  portraitQuery.addEventListener("change", () => {
+    if (state.phase === "race") {
+      raceView = null;
+      renderRace();
+    }
+  });
+}
+
+function stackOffsets(count) {
+  if (count <= 1) return [[0, 0]];
+  if (count === 2) return [[-14, 0], [14, 0]];
+  if (count === 3) return [[-15, 8], [15, 8], [0, -14]];
+  return [[-14, -14], [14, -14], [-14, 14], [14, 14]];
+}
+
 function renderRace() {
-  const entrant = currentEntrant();
-  const player = entrant ? playerById(entrant.playerId) : null;
-  const racer = entrant ? racerById(entrant.racerId) : null;
-  const points = RACE_POINTS[state.raceNumber];
-  const isChaos = state.raceNumber % 2 === 1;
-  const buttonLabel = entrant?.tripped ? "Stand up" : racer?.id === "moss-golem" ? "Use measured march" : "Roll and move";
-
-  app.innerHTML = `
-    <section class="race-layout">
-      <div class="panel track-panel">
-        <div class="race-topline">
-          <div class="track-name"><strong>Race ${state.raceNumber + 1}</strong><span>${isChaos ? "Chaos Circuit" : "Calm Course"}</span></div>
-          <div class="status-pill">🥇 ${points[0]} pts · 🥈 ${points[1]} pts</div>
-        </div>
-        ${abilityBurstHtml()}
-        ${effectBurstHtml()}
-        <div class="board-scroll">${trackCellsHtml(entrant?.playerId, isChaos)}</div>
-        <p class="board-help">Hover a runner token, or focus it with the keyboard, to inspect its ability.</p>
-      </div>
-      <aside class="panel turn-panel">
-        ${entrant ? `
-          <div class="active-racer-card ${state.abilityFlash?.playerId === entrant.playerId ? "ability-active" : ""}">
-            <p class="eyebrow">Current turn</p>
-            <div class="big-icon">${racer.icon}</div>
-            <h3 style="color:${player.color}">${player.name}</h3>
-            <strong>${racer.name}</strong>
-            <p class="sidebar-note">${racer.powerName}: ${racer.power}</p>
-          </div>
-          ${dieHtml()}
-          <button id="rollButton" class="primary-button" type="button" ${!canControlPlayer(player) || state.busy ? "disabled" : ""}>${buttonLabel}</button>
-        ` : ""}
-        <div class="race-roster">
-          <div class="race-roster-title"><strong>Runners in play</strong><span>Live positions</span></div>
-          ${raceRosterHtml(entrant?.playerId)}
-        </div>
-        <div>
-          <p class="eyebrow">Race log</p>
-          <div class="log">${state.log.map((entry) => `<div class="log-entry">${entry}</div>`).join("")}</div>
-        </div>
-      </aside>
-    </section>`;
-
-  const rollButton = document.getElementById("rollButton");
-  if (rollButton && canControlPlayer(player)) rollButton.addEventListener("click", requestTakeTurn);
+  const portrait = portraitQuery.matches;
+  const key = `${state.raceNumber}|${portrait}|${state.entrants.map((entrant) => entrant.playerId + entrant.racerId).join(",")}`;
+  if (!raceView || raceView.key !== key || !document.body.contains(raceView.root)) mountRace(key, portrait);
+  paintRace();
   network.broadcastState();
 }
 
-function abilityBurstHtml() {
-  if (!state.abilityFlash) return "";
-  const player = playerById(state.abilityFlash.playerId);
-  const racer = racerById(state.abilityFlash.racerId);
+function mountRace(key, portrait) {
+  const theme = themeForRace(state.raceNumber);
+  const chaos = isChaosRace(state.raceNumber);
+  const points = RACE_POINTS[state.raceNumber];
+  const size = ArcaneMaps.size(portrait);
+  app.innerHTML = `
+    <section class="race-screen theme-${theme.key}">
+      <div class="race-main">
+        <header class="race-head">
+          <div>
+            <p class="phase-step">Race ${state.raceNumber + 1} of 4 · ${chaos ? "Chaos track" : "Calm track"}</p>
+            <h2 class="screen-title">${theme.name}</h2>
+          </div>
+          <p class="stakes"><span class="medal is-gold">1st</span> +${points[0]} <span class="medal is-silver">2nd</span> +${points[1]}</p>
+        </header>
+        <div class="board ${portrait ? "is-portrait" : ""}" style="--u:${(100 / size.w).toFixed(5)}cqw;aspect-ratio:${size.w} / ${size.h}">
+          <div class="board-map">${ArcaneMaps.boardSvg(state.raceNumber, { portrait, chaosSpaces: chaos ? CHAOS_SPACES : {}, idPrefix: "rb" })}</div>
+          <div class="board-tokens" id="boardTokens"></div>
+          <div class="board-callout" id="boardCallout" aria-live="polite"></div>
+        </div>
+        ${chaos ? `<ul class="map-legend">
+          <li><i class="legend-dot is-boost"></i>Boost: jump ahead</li>
+          <li><i class="legend-dot is-setback"></i>Setback: slide back</li>
+          <li><i class="legend-dot is-trip"></i>Trip: lose your next move</li>
+        </ul>` : `<p class="map-legend-note">Calm track: no special spaces.</p>`}
+      </div>
+      <div class="turn-card" id="turnCard"></div>
+      <section class="panel standings-panel">
+        <h3 class="side-title">Positions</h3>
+        <ol class="standings" id="standings"></ol>
+      </section>
+      <details class="panel race-log">
+        <summary class="side-title">Race log</summary>
+        <ol id="raceLog"></ol>
+      </details>
+    </section>`;
+  raceView = {
+    key,
+    portrait,
+    root: app.querySelector(".race-screen"),
+    tokens: new Map(),
+    lastPos: new Map(),
+    turnHtml: "",
+    standingsHtml: "",
+    logHtml: "",
+    calloutHtml: ""
+  };
+}
+
+function entrantStatus(entrant) {
+  if (entrant.finished) return entrant.finishPlace === 1 ? "Finished 1st" : entrant.finishPlace === 2 ? "Finished 2nd" : `Finished ${entrant.finishPlace}th`;
+  if (entrant.pos === 0) return "At the start";
+  return `Space ${entrant.pos}`;
+}
+
+function paintRace() {
+  const view = raceView;
+  const current = currentEntrant();
+  const activeId = state.raceOver ? null : current?.playerId;
+
+  // Tokens
+  const layer = document.getElementById("boardTokens");
+  const groups = new Map();
+  state.entrants.forEach((entrant) => {
+    const spot = entrant.finished ? TRACK_LENGTH : entrant.pos;
+    if (!groups.has(spot)) groups.set(spot, []);
+    groups.get(spot).push(entrant);
+  });
+  state.entrants.forEach((entrant) => {
+    const player = playerById(entrant.playerId);
+    const racer = racerById(entrant.racerId);
+    const spot = entrant.finished ? TRACK_LENGTH : entrant.pos;
+    const group = groups.get(spot);
+    const offset = stackOffsets(group.length)[group.indexOf(entrant)];
+    const [x, y] = ArcaneMaps.spacePoint(spot, view.portrait);
+    let token = view.tokens.get(entrant.playerId);
+    if (!token) {
+      token = document.createElement("button");
+      token.type = "button";
+      token.className = "token";
+      token.innerHTML = `<span class="token-body">${portraitImg(racer.id)}</span><span class="token-badge" aria-hidden="true"></span><span class="token-tip" role="tooltip"><span class="tip-team"></span><strong>${racer.name}</strong><span class="tip-power"><b>${racer.powerName}</b> ${racer.power}</span><span class="tip-pos"></span></span>`;
+      token.style.setProperty("--team", player.color);
+      layer.appendChild(token);
+      view.tokens.set(entrant.playerId, token);
+    }
+    token.style.setProperty("--x", (x + offset[0]).toFixed(1));
+    token.style.setProperty("--y", (y + offset[1]).toFixed(1));
+    token.style.zIndex = String(entrant.playerId === activeId ? 30 : 10 + Math.round(y / 10));
+    token.classList.toggle("is-active", entrant.playerId === activeId);
+    token.classList.toggle("is-ability", entrant.playerId === state.abilityFlash?.playerId);
+    token.classList.toggle("is-down", Boolean(entrant.tripped || entrant.napping));
+    token.classList.toggle("is-finished", entrant.finished);
+    const mapWidth = view.portrait ? 620 : 1000;
+    token.classList.toggle("tip-below", y < 200);
+    token.classList.toggle("tip-left", x > mapWidth - 170);
+    token.classList.toggle("tip-right", x < 170);
+    token.querySelector(".token-badge").textContent = entrant.finished ? String(entrant.finishPlace) : entrant.tripped ? "!" : entrant.napping ? "z" : "";
+    token.querySelector(".tip-team").textContent = player.name;
+    token.querySelector(".tip-team").style.color = player.color;
+    token.querySelector(".tip-pos").textContent = entrantStatus(entrant);
+    token.setAttribute("aria-label", `${player.name}: ${racer.name}, ${entrantStatus(entrant).toLowerCase()}. ${racer.powerName}: ${racer.power}`);
+    const last = view.lastPos.get(entrant.playerId);
+    if (last !== undefined && last !== spot && typeof token.firstElementChild.animate === "function") {
+      token.firstElementChild.animate(
+        [{ transform: "translateY(0) scale(1)" }, { transform: "translateY(-38%) scale(1.08)" }, { transform: "translateY(0) scale(1)" }],
+        { duration: Math.min(STEP_DELAY + 20, 220), easing: "cubic-bezier(.22,.8,.3,1)" }
+      );
+    }
+    view.lastPos.set(entrant.playerId, spot);
+  });
+
+  // Callout
+  let calloutHtml = "";
+  if (state.abilityFlash) {
+    const player = playerById(state.abilityFlash.playerId);
+    calloutHtml = `<div class="callout" style="--team:${player.color}">${portraitImg(state.abilityFlash.racerId)}<div><span class="callout-who">${teamName(player)} · ${racerById(state.abilityFlash.racerId).name}</span><strong>${escapeHtml(state.abilityFlash.name)}</strong><span class="callout-detail">${escapeHtml(state.abilityFlash.detail)}</span></div></div>`;
+  } else if (state.effectFlash) {
+    calloutHtml = `<div class="callout is-effect is-${state.effectFlash.type}"><i class="legend-dot is-${state.effectFlash.type}"></i><strong>${escapeHtml(state.effectFlash.text)}</strong></div>`;
+  }
+  if (calloutHtml !== view.calloutHtml) {
+    document.getElementById("boardCallout").innerHTML = calloutHtml;
+    view.calloutHtml = calloutHtml;
+  }
+
+  // Turn card
+  const turnHtml = turnCardHtml(current);
+  if (turnHtml !== view.turnHtml) {
+    const card = document.getElementById("turnCard");
+    const hadFocus = document.activeElement?.id === "rollButton";
+    card.innerHTML = turnHtml;
+    view.turnHtml = turnHtml;
+    const roll = document.getElementById("rollButton");
+    if (roll) {
+      roll.addEventListener("click", requestTakeTurn);
+      if (hadFocus && !roll.disabled) roll.focus({ preventScroll: true });
+    }
+  }
+
+  // Standings
+  const ranked = [...state.entrants].sort((a, b) => (a.finishPlace || 99) - (b.finishPlace || 99) || b.pos - a.pos);
+  const standingsHtml = ranked.map((entrant, index) => {
+    const player = playerById(entrant.playerId);
+    const racer = racerById(entrant.racerId);
+    const progress = Math.min(100, (entrant.finished ? TRACK_LENGTH : entrant.pos) / TRACK_LENGTH * 100);
+    return `<li class="standing ${entrant.playerId === activeId ? "is-active" : ""}" style="--team:${player.color};--progress:${progress.toFixed(1)}%">
+      <span class="standing-rank">${index + 1}</span>
+      ${portraitImg(racer.id, "", "")}
+      <span class="standing-copy"><strong>${teamName(player)}</strong><span>${racer.name}${entrant.tripped ? " · tripped" : entrant.napping ? " · napping" : ""}</span></span>
+      <span class="standing-pos">${entrant.finished ? (entrant.finishPlace === 1 ? "1st" : entrant.finishPlace === 2 ? "2nd" : "Done") : entrant.pos}</span>
+      <span class="standing-bar" aria-hidden="true"></span>
+    </li>`;
+  }).join("");
+  if (standingsHtml !== view.standingsHtml) {
+    document.getElementById("standings").innerHTML = standingsHtml;
+    view.standingsHtml = standingsHtml;
+  }
+
+  const logHtml = state.log.map((entry) => `<li>${entry}</li>`).join("");
+  if (logHtml !== view.logHtml) {
+    document.getElementById("raceLog").innerHTML = logHtml;
+    view.logHtml = logHtml;
+  }
+}
+
+function turnCardHtml(entrant) {
+  if (!entrant || state.raceOver) {
+    return `<div class="panel turn-panel"><p class="turn-wait">Race complete. Tallying the podium...</p></div>`;
+  }
+  const player = playerById(entrant.playerId);
+  const racer = racerById(entrant.racerId);
+  const controllable = canControlPlayer(player);
+  const label = entrant.tripped ? "Stand up" : entrant.napping ? "Wake up" : racer.id === "moss-golem" ? "March" : "Roll";
+  const value = state.lastRoll ?? "";
+  const shown = value === "" ? "?" : value;
+  const pips = state.diceSides === 8 ? "d8" : "d6";
+  const waiting = player.isBot ? `${teamName(player)} (bot) is rolling` : `Waiting for ${teamName(player)}`;
   return `
-    <div class="ability-burst" style="--burst-color:${player.color}">
-      <div class="ability-burst-icon">${racer.icon}</div>
-      <div>
-        <p class="eyebrow">Ability activated</p>
-        <h3>${state.abilityFlash.name}</h3>
-        <p>${state.abilityFlash.detail}</p>
+    <div class="panel turn-panel" style="--team:${player.color};--tint:${racerTint(racer.id)}">
+      <div class="turn-who">
+        ${portraitImg(racer.id, "turn-art", "")}
+        <div class="turn-names">
+          <span class="turn-team"><span class="team-swatch"></span>${teamName(player)}</span>
+          <strong class="turn-runner">${racer.name}</strong>
+          <span class="turn-power"><b>${racer.powerName}</b> ${racer.power}</span>
+        </div>
+      </div>
+      <div class="turn-action">
+        <div class="die-wrap ${state.diceRolling ? "is-rolling" : ""}">
+          <div class="die ${pips} ${value === "" ? "is-idle" : ""}" aria-live="polite" aria-label="${value ? `Die shows ${value}` : "Die ready"}"><span id="dieValue">${escapeHtml(String(shown))}</span></div>
+          <span class="die-caption">${escapeHtml(state.diceCaption)}</span>
+        </div>
+        ${controllable
+          ? `<button id="rollButton" class="btn btn-primary btn-roll" type="button" ${state.busy ? "disabled" : ""}>${label}<kbd class="key-hint">R</kbd></button>`
+          : `<p class="turn-wait">${waiting}</p>`}
       </div>
     </div>`;
 }
 
-function effectBurstHtml() {
-  if (!state.effectFlash) return "";
-  return `<div class="effect-burst">${state.effectFlash.icon} ${state.effectFlash.text}</div>`;
+// ---------------------------------------------------------------------------
+// Results
+// ---------------------------------------------------------------------------
+
+async function endRace() {
+  state.raceOver = true;
+  state.motionPlayerId = null;
+  renderRace();
+  await wait(900);
+  showRaceResults();
 }
 
-function dieHtml() {
-  const value = state.lastRoll ?? "?";
+function showRaceResults() {
+  const points = RACE_POINTS[state.raceNumber];
+  state.finishers.slice(0, 2).forEach((entrant, index) => {
+    playerById(entrant.playerId).score += points[index];
+  });
+  state.phase = "results";
+  renderRaceResults();
+}
+
+function podiumHtml(entrant, place, points) {
+  if (!entrant) return "";
+  const player = playerById(entrant.playerId);
+  const racer = racerById(entrant.racerId);
   return `
-    <div class="dice-stage ${state.diceRolling ? "rolling" : ""}">
-      <div class="die d${state.diceSides}" aria-label="Die result ${value}"><span id="dieValue">${value}</span></div>
-      <span class="dice-caption">${state.diceCaption}</span>
+    <div class="podium-spot place-${place}" style="--team:${player.color};--tint:${racerTint(racer.id)}">
+      ${portraitImg(racer.id, "podium-art", racer.name)}
+      <span class="medal ${place === 1 ? "is-gold" : "is-silver"}">${place === 1 ? "1st" : "2nd"}</span>
+      <strong>${racer.name}</strong>
+      <span class="podium-team">${teamName(player)}</span>
+      <span class="podium-points">+${points}</span>
     </div>`;
 }
 
-function raceRosterHtml(activePlayerId) {
-  return [...state.entrants]
-    .sort((a, b) => Number(b.finished) - Number(a.finished) || b.pos - a.pos)
-    .map((entrant) => {
-      const player = playerById(entrant.playerId);
-      const racer = racerById(entrant.racerId);
-      const status = entrant.finished ? `Place ${entrant.finishPlace}` : entrant.pos === 0 ? "Start" : `Space ${entrant.pos}`;
-      return `
-        <div class="roster-card ${entrant.playerId === activePlayerId ? "active" : ""}" style="--player-color:${player.color}">
-          <div class="roster-icon">${racer.icon}</div>
-          <div class="roster-copy"><strong>${player.name}</strong><span>${racer.name} · ${racer.powerName}</span></div>
-          <div class="roster-position">${status}</div>
-        </div>`;
-    }).join("");
+function leagueTableHtml(players, options = {}) {
+  const top = Math.max(1, ...players.map((player) => player.score));
+  return `<ol class="league-table">${players.map((player, index) => `
+    <li class="league-row ${options.winnerScore === player.score ? "is-winner" : ""}" style="--team:${player.color};--share:${(player.score / top * 100).toFixed(1)}%">
+      <span class="league-rank">${index + 1}</span>
+      <span class="league-name"><span class="team-swatch"></span>${teamName(player)}</span>
+      ${teamSlotsHtml(player, { showUsed: options.showUsed })}
+      <span class="league-score">${player.score}<small>pts</small></span>
+      <span class="league-bar" aria-hidden="true"></span>
+    </li>`).join("")}</ol>`;
 }
 
-function trackCellsHtml(activePlayerId, isChaos) {
-  const routePoints = BOARD_SPACES.map((point) => `${point.x},${point.y}`).join(" ");
-  const terrain = isChaos ? "chaos-board" : "calm-board";
-
-  return `
-    <div class="race-board ${terrain}" role="group" aria-label="A winding 30-space fantasy race course from the start gate to the finish arch">
-      <svg class="route-map" viewBox="0 0 1000 620" aria-hidden="true" preserveAspectRatio="none">
-        <polyline class="route-shadow" points="${routePoints}"></polyline>
-        <polyline class="route-ribbon" points="${routePoints}"></polyline>
-        <polyline class="route-centerline" points="${routePoints}"></polyline>
-      </svg>
-      ${boardLandmarksHtml(isChaos)}
-      ${BOARD_SPACES.map((point, space) => {
-        const effect = isChaos ? CHAOS_SPACES[space] : null;
-        const hasMovingToken = state.motionPlayerId && entrantByPlayer(state.motionPlayerId)?.pos === space;
-        const classes = [
-          "route-space",
-          effect?.type || "",
-          space === 0 ? "start-space" : "",
-          space === TRACK_LENGTH ? "finish-space" : "",
-          hasMovingToken ? "motion-cell" : ""
-        ].filter(Boolean).join(" ");
-        const label = space === 0 ? "START" : space === TRACK_LENGTH ? "FINISH" : String(space);
-        const effectIcon = effect ? (effect.type === "boost" ? "⬆" : effect.type === "setback" ? "⬇" : "💫") : "";
-        return `
-          <div class="${classes}" style="--space-x:${point.x / 10}%;--space-y:${point.y / 6.2}%" aria-label="${space === 0 ? "Start" : `Space ${space}`}${effect ? `, ${effect.type} ${effect.label}` : ""}">
-            <span class="space-marker">${label}</span>
-            ${effect ? `<span class="space-effect" aria-hidden="true">${effectIcon}<small>${effect.label}</small></span>` : ""}
-            <div class="token-stack">${tokensAtPosition(space, activePlayerId)}</div>
-          </div>`;
-      }).join("")}
-      ${isChaos ? `<div class="board-legend" aria-hidden="true">
-        <span><i class="legend-dot boost"></i> Boost</span>
-        <span><i class="legend-dot setback"></i> Setback</span>
-        <span><i class="legend-dot trip"></i> Trip</span>
-      </div>` : `<div class="board-mode-badge" aria-hidden="true">Calm course · no hazard spaces</div>`}
-    </div>`;
+function renderRaceResults() {
+  const points = RACE_POINTS[state.raceNumber];
+  const standings = [...state.players].sort((a, b) => b.score - a.score);
+  const last = state.raceNumber === 3;
+  app.innerHTML = `
+    <section class="panel results-screen">
+      <p class="phase-step">Race ${state.raceNumber + 1} of 4 · ${themeForRace(state.raceNumber).name}</p>
+      <h2 class="screen-title">Podium</h2>
+      <div class="podium">
+        ${podiumHtml(state.finishers[0], 1, points[0])}
+        ${podiumHtml(state.finishers[1], 2, points[1])}
+      </div>
+      <h3 class="side-title">League table</h3>
+      ${leagueTableHtml(standings, { showUsed: true })}
+      <div class="results-actions">
+        ${canAdvanceGame()
+          ? `<button id="nextRaceButton" class="btn btn-primary" type="button">${last ? "Final standings" : `On to race ${state.raceNumber + 2}: ${themeForRace(state.raceNumber + 1).name}`}</button>`
+          : `<p class="waiting-note">Waiting for the host to continue</p>`}
+      </div>
+    </section>`;
+  const nextButton = document.getElementById("nextRaceButton");
+  if (nextButton) nextButton.addEventListener("click", () => {
+    audio.playUi();
+    if (state.raceNumber === 3) showFinalResults();
+    else {
+      state.raceNumber += 1;
+      beginRaceSelection();
+    }
+  });
+  network.broadcastState();
 }
 
-function boardLandmarksHtml(isChaos) {
-  return `
-    <div class="board-landmark landmark-grove"><span>🌲</span><strong>Whisper Grove</strong></div>
-    <div class="board-landmark landmark-pool"><span>🌙</span><strong>Moon Pool</strong></div>
-    <div class="board-landmark landmark-ruins"><span>🏛️</span><strong>Echo Ruins</strong></div>
-    <div class="board-landmark landmark-ridge"><span>${isChaos ? "🌋" : "⛰️"}</span><strong>${isChaos ? "Ember Ridge" : "Cloud Ridge"}</strong></div>
-    <div class="finish-banner" aria-hidden="true">🏁</div>`;
+function showFinalResults() {
+  state.phase = "final";
+  renderFinalResults();
 }
 
-function tokensAtPosition(position, activePlayerId) {
-  const point = BOARD_SPACES[position] || BOARD_SPACES[0];
-  const tooltipClasses = [
-    point.x < 190 ? "tooltip-edge-left" : "",
-    point.x > 820 ? "tooltip-edge-right" : "",
-    point.y < 165 ? "tooltip-below" : ""
-  ].filter(Boolean).join(" ");
-
-  return state.entrants
-    .filter((entrant) => entrant.pos === position && !entrant.finished)
-    .map((entrant) => {
-      const player = playerById(entrant.playerId);
-      const racer = racerById(entrant.racerId);
-      const classes = [
-        "race-token",
-        entrant.playerId === activePlayerId ? "active" : "",
-        entrant.playerId === state.motionPlayerId ? "moving" : "",
-        entrant.playerId === state.abilityFlash?.playerId ? "ability-active" : "",
-        entrant.tripped ? "tripped" : ""
-      ].filter(Boolean).join(" ");
-      const status = position === 0 ? "at the start" : `on space ${position}`;
-      return `
-        <button type="button" class="${classes}" style="--token-color:${player.color}" aria-label="${player.name}'s ${racer.name}, ${status}. ${racer.powerName}: ${racer.power}">
-          <span class="token-glyph" aria-hidden="true">${racer.icon}</span>
-          <span class="token-tooltip ${tooltipClasses}" role="tooltip">
-            <span class="tooltip-team" style="color:${player.color}">${player.name}</span>
-            <strong>${racer.name}</strong>
-            <span class="tooltip-power"><b>${racer.powerName}</b>${racer.power}</span>
-            <span class="tooltip-position">${status}</span>
-          </span>
-        </button>`;
-    }).join("");
+function renderFinalResults() {
+  const standings = [...state.players].sort((a, b) => b.score - a.score);
+  const topScore = standings[0].score;
+  const winners = standings.filter((player) => player.score === topScore);
+  const champion = winners[0];
+  app.innerHTML = `
+    <section class="panel final-screen" style="--team:${champion.color}">
+      <div class="final-banner">
+        <p class="phase-step">League complete</p>
+        <h2 class="final-title">${winners.length > 1 ? `Shared title: ${winners.map(teamName).join(" & ")}` : `${teamName(champion)} ${champion.name.trim().toLowerCase() === "you" ? "win" : "wins"} the league`}</h2>
+        <div class="final-cast">${champion.team.map((slot) => portraitImg(slot.racerId, "", racerById(slot.racerId).name)).join("")}</div>
+      </div>
+      ${leagueTableHtml(standings, { winnerScore: topScore })}
+      <div class="results-actions">
+        ${canAdvanceGame() ? `<button id="playAgainButton" class="btn btn-primary" type="button">${network.online ? "Back to the lobby" : "Play again"}</button>` : `<p class="waiting-note">Waiting for the host</p>`}
+      </div>
+    </section>`;
+  const playAgainButton = document.getElementById("playAgainButton");
+  if (playAgainButton) playAgainButton.addEventListener("click", async () => {
+    audio.playUi();
+    if (network.online) {
+      try {
+        await network.resetLobby();
+      } catch (error) {
+        showNetworkError(error);
+      }
+    } else renderSetup();
+  });
+  if (!network.online || network.isHost) audio.playFinish();
+  network.broadcastState();
 }
 
 function addLog(message) {
@@ -1292,7 +1547,7 @@ function maybeRunBotTurn() {
   if (!entrant) return;
   const player = playerById(entrant.playerId);
   if (!player.isBot) return;
-  window.setTimeout(takeTurn, 720);
+  window.setTimeout(takeTurn, 650);
 }
 
 async function animateDice(finalValue, sides = 6, caption = "Rolling") {
@@ -1302,19 +1557,19 @@ async function animateDice(finalValue, sides = 6, caption = "Rolling") {
   state.lastRoll = "?";
   renderRace();
 
-  const cycles = 10;
+  const cycles = 8;
   for (let index = 0; index < cycles; index += 1) {
     const dieValue = document.getElementById("dieValue");
     if (dieValue) dieValue.textContent = String(randomInt(1, sides));
     audio.playDice();
-    await wait(72 + index * 3);
+    await wait(62 + index * 6);
   }
 
   state.lastRoll = finalValue;
   state.diceRolling = false;
-  state.diceCaption = `Result: ${finalValue}`;
+  state.diceCaption = caption === "Rolling" ? "Rolled" : caption;
   renderRace();
-  await wait(300);
+  await wait(260);
 }
 
 async function showAbility(entrant, name, detail) {
@@ -1323,16 +1578,16 @@ async function showAbility(entrant, name, detail) {
   state.abilityFlash = { playerId: entrant.playerId, racerId: entrant.racerId, name, detail };
   audio.playAbility();
   renderRace();
-  await wait(620);
+  await wait(760);
   state.abilityFlash = null;
   renderRace();
 }
 
-async function showEffect(icon, text, type = "boost") {
-  state.effectFlash = { icon, text };
-  audio.playHazard(type);
+async function showEffect(type, text, sound = type) {
+  state.effectFlash = { type, text };
+  audio.playHazard(sound);
   renderRace();
-  await wait(460);
+  await wait(620);
   state.effectFlash = null;
   renderRace();
 }
@@ -1350,13 +1605,24 @@ async function takeTurn() {
   entrant.turns += 1;
   const player = playerById(entrant.playerId);
   const racer = racerById(entrant.racerId);
+  const tune = racer.tune || {};
 
   if (entrant.tripped) {
     entrant.tripped = false;
-    state.lastRoll = "↟";
+    state.lastRoll = "–";
     state.diceCaption = "Standing up";
-    await showEffect("🌀", `${racer.name} stands up`, "trip");
-    addLog(`<strong>${player.name}</strong>'s ${racer.name} stands up and misses the move.`);
+    await showEffect("trip", `${racer.name} stands up`, "trip");
+    addLog(`<strong>${escapeHtml(player.name)}</strong>'s ${racer.name} stands up and misses the move.`);
+    await finishTurn();
+    return;
+  }
+
+  if (entrant.napping) {
+    entrant.napping = false;
+    state.lastRoll = "z";
+    state.diceCaption = "Napping";
+    await showAbility(entrant, racer.powerName, "Sleeping off the big dream. No move this turn.");
+    addLog(`<strong>${escapeHtml(player.name)}</strong>'s ${racer.name} naps through the turn.`);
     await finishTurn();
     return;
   }
@@ -1364,157 +1630,148 @@ async function takeTurn() {
   let naturalRoll = null;
   let movement = 0;
   const notes = [];
+  const leader = getLeaderPosition();
 
   if (racer.id === "moss-golem") {
-    await showAbility(entrant, racer.powerName, "No random result. The march is always exactly 4.");
-    movement = 4;
-    await animateDice(4, 6, "Measured march");
+    const lastPlace = leader - entrant.pos >= tune.gap;
+    movement = lastPlace ? tune.last : tune.fixed;
+    await animateDice(movement, 6, lastPlace ? "Pushing from behind" : "Measured march");
+  } else if (racer.id === "nap-dragon") {
+    naturalRoll = randomInt(1, 8);
+    movement = naturalRoll;
+    await animateDice(naturalRoll, 8, "Dream die");
   } else {
-    const sides = racer.id === "nap-dragon" ? 8 : 6;
-    if (racer.id === "nap-dragon") await showAbility(entrant, racer.powerName, "The dream die has eight possible results.");
-    naturalRoll = randomInt(1, sides);
-    movement = naturalRoll;
-    await animateDice(naturalRoll, sides, sides === 8 ? "Rolling dream die" : "Rolling die");
-  }
-
-  if (racer.id === "clockwork-hare" && naturalRoll === 1) {
-    await showAbility(entrant, racer.powerName, "A roll of 1 gets one automatic reroll.");
     naturalRoll = randomInt(1, 6);
     movement = naturalRoll;
-    notes.push(`rerolled to ${naturalRoll}`);
-    await animateDice(naturalRoll, 6, "Second chance reroll");
+    await animateDice(naturalRoll, 6, "Rolling");
   }
 
-  if (racer.id === "lucky-turnip" && naturalRoll <= 2 && !entrant.usedReroll) {
-    entrant.usedReroll = true;
-    await showAbility(entrant, racer.powerName, "The low result is replaced once this race.");
+  if (racer.id === "clockwork-hare" && naturalRoll !== null && naturalRoll <= tune.below) {
+    await showAbility(entrant, racer.powerName, `A ${naturalRoll} gets rerolled.`);
     naturalRoll = randomInt(1, 6);
     movement = naturalRoll;
-    notes.push(`rerolled to ${naturalRoll}`);
-    await animateDice(naturalRoll, 6, "Fresh start reroll");
+    movement = naturalRoll + tune.bonus;
+    notes.push(`rerolled to ${naturalRoll}, +${tune.bonus}`);
+    await animateDice(naturalRoll, 6, "Reroll");
   }
 
-  const leader = getLeaderPosition();
-  const last = getLastPosition();
+  const bonus = async (amount, detail, note) => {
+    movement += amount;
+    await showAbility(entrant, racer.powerName, detail);
+    notes.push(note || `+${amount}`);
+  };
 
-  if (racer.id === "storm-crow" && naturalRoll === 1) {
-    const target = Math.max(entrant.pos, leader - 2);
-    movement = target - entrant.pos;
-    await showAbility(entrant, racer.powerName, `Leap toward the leader and stop at space ${target}.`);
-    notes.push(`jumped ${movement}`);
+  if (racer.id === "lucky-turnip" && naturalRoll === 2) {
+    movement = tune.value;
+    await showAbility(entrant, racer.powerName, `The lucky 2 counts as ${tune.value}.`);
+    notes.push(`2 became ${tune.value}`);
   }
-  if (racer.id === "comet-kid" && naturalRoll === 6) {
-    movement += 2;
-    await showAbility(entrant, racer.powerName, "A perfect roll adds 2 movement.");
-    notes.push("gained +2");
+  if (racer.id === "comet-kid" && naturalRoll === 6) await bonus(tune.bonus, `A perfect 6 adds ${tune.bonus}.`);
+  if (racer.id === "moon-moth" && naturalRoll % 2 === 1) await bonus(tune.bonus, "An odd roll adds 1.");
+  if (racer.id === "gear-goblin" && entrant.charge > 0) await bonus(entrant.charge, `Tuned gears add ${entrant.charge}.`);
+  if (racer.id === "lantern-sprite" && trailsAllBy(entrant, tune.gap)) {
+    const ahead = state.entrants.filter((other) => other !== entrant && !other.finished).length * tune.bonus;
+    await bonus(ahead, `Trailing the pack: the lantern flares for ${ahead}.`);
   }
-  if (racer.id === "moon-moth" && naturalRoll % 2 === 1) {
-    movement += 1;
-    await showAbility(entrant, racer.powerName, "An odd roll adds 1 movement.");
-    notes.push("gained +1");
-  }
-  if (racer.id === "gear-goblin" && leader - entrant.pos >= 6) {
-    movement += 1;
-    await showAbility(entrant, racer.powerName, "The gap to the leader is at least 6, adding 1 movement.");
-    notes.push("gained +1");
-  }
-  if (racer.id === "lantern-sprite" && entrant.pos === last) {
-    movement += 2;
-    await showAbility(entrant, racer.powerName, "Starting in last place adds 2 movement.");
-    notes.push("gained +2");
-  }
-  if (racer.id === "crown-crab" && entrant.pos === leader) {
-    movement += 2;
-    await showAbility(entrant, racer.powerName, "Starting tied for the lead adds 2 movement.");
-    notes.push("gained +2");
-  }
-  if (racer.id === "spark-snail" && entrant.turns % 2 === 0) {
-    movement += 2;
-    await showAbility(entrant, racer.powerName, "Stored energy releases on every second turn for +2 movement.");
-    notes.push("gained +2");
-  }
+  if (racer.id === "crown-crab" && leader - entrant.pos <= tune.range) await bonus(tune.bonus, `Within ${tune.range} of the lead: royal pace adds ${tune.bonus}.`);
+  if (racer.id === "spark-snail" && entrant.turns % tune.every === 0) await bonus(tune.bonus, `Every third turn: stored energy releases ${tune.bonus}.`);
   if (racer.id === "wisp-twins") {
-    if (entrant.turns % 2 === 1) {
-      movement += 2;
-      await showAbility(entrant, racer.powerName, "The bright twin adds 2 movement on this odd turn.");
-      notes.push("gained +2");
-    } else {
-      movement = Math.max(1, movement - 1);
-      await showAbility(entrant, racer.powerName, "The dim twin removes 1 movement on this even turn.");
-      notes.push("lost 1");
+    if (entrant.turns % 2 === 1) await bonus(tune.up, `The bright twin adds ${tune.up}.`);
+    else {
+      movement = Math.max(1, movement - tune.down);
+      await showAbility(entrant, racer.powerName, `The dim twin takes ${tune.down} away.`);
+      notes.push(`-${tune.down}`);
     }
   }
   if (racer.id === "river-otter") {
-    const companions = state.entrants.filter((other) => other.playerId !== entrant.playerId && !other.finished && other.pos === entrant.pos).length;
-    if (companions) {
-      movement += companions;
-      await showAbility(entrant, racer.powerName, `${companions} nearby runner${companions === 1 ? "" : "s"} add ${companions} movement.`);
-      notes.push(`gained +${companions}`);
-    }
+    const companions = state.entrants.filter((other) => other !== entrant && !other.finished && other.pos - entrant.pos >= 0 && other.pos - entrant.pos <= tune.range).length;
+    if (companions) await bonus(Math.min(tune.max, companions), `${companions} rival${companions === 1 ? "" : "s"} close by add ${Math.min(tune.max, companions)}.`);
   }
-  if (racer.id === "meteor-mouse" && leader - entrant.pos >= 10) {
-    movement = 5;
-    await showAbility(entrant, racer.powerName, "The leader is at least 10 spaces away, setting movement to 5.");
-    notes.push("set movement to 5");
+  if (racer.id === "mirror-owl" && naturalRoll !== null && state.previousNaturalRoll > naturalRoll) {
+    const gain = Math.min(tune.max, state.previousNaturalRoll - naturalRoll);
+    await bonus(gain, `The last runner rolled ${state.previousNaturalRoll}. Reflection adds ${gain}.`);
   }
-  if (racer.id === "mirror-owl" && state.previousNaturalRoll >= 5) {
-    movement += 1;
-    await showAbility(entrant, racer.powerName, `The previous natural roll was ${state.previousNaturalRoll}, adding 1 movement.`);
-    notes.push("gained +1");
+  if (racer.id === "meteor-mouse" && leader - entrant.pos >= tune.gap) {
+    const before = movement;
+    movement *= 2;
+    await showAbility(entrant, racer.powerName, `Far behind: ${before} doubles to ${movement}.`);
+    notes.push("doubled");
+  }
+  if (racer.id === "storm-crow" && naturalRoll !== null && naturalRoll <= tune.max) {
+    const target = Math.max(entrant.pos + naturalRoll, leader - tune.gap);
+    movement = target - entrant.pos;
+    await showAbility(entrant, racer.powerName, `Lightning carries the crow to space ${target}.`);
+    notes.push(`jumped ${movement}`);
   }
 
-  const frostEntrant = state.entrants.find((other) => other.playerId !== entrant.playerId && !other.finished && other.pos === entrant.pos && other.racerId === "frost-yak");
-  if (frostEntrant) {
-    movement = Math.max(1, movement - 1);
-    await showAbility(frostEntrant, racerById(frostEntrant.racerId).powerName, `${racer.name} starts in the chill field and loses 1 movement.`);
-    notes.push("lost 1 in a chill field");
+  const yak = state.entrants.find((other) => other !== entrant && !other.finished && other.racerId === "frost-yak" && entrant.pos - other.pos >= 0 && entrant.pos - other.pos <= racerById("frost-yak").tune.range);
+  if (yak && movement > 1) {
+    const chill = Math.min(movement - 1, racerById("frost-yak").tune.chill);
+    movement -= chill;
+    await showAbility(yak, racerById("frost-yak").powerName, `${racer.name} is chilled and loses ${chill}.`);
+    notes.push(`chilled -${chill}`);
+  }
+
+  if (racer.id === "anchor-knight" && naturalRoll !== null && naturalRoll < tune.below && movement < tune.floor) {
+    movement = tune.floor;
+    await showAbility(entrant, racer.powerName, `A 1 becomes ${tune.floor}.`);
+    notes.push(`raised to ${tune.floor}`);
   }
 
   const startPos = entrant.pos;
-  if (racer.id === "shadow-cat" && shadowPathUsesSlipstream(entrant, movement)) {
-    await showAbility(entrant, racer.powerName, "Occupied spaces are crossed without spending movement.");
-  }
-
-  if (racer.id === "shadow-cat") await moveShadowCatAnimated(entrant, movement);
+  if (racer.id === "shadow-cat") await moveShadowCatAnimated(entrant, movement, tune.free);
   else await moveEntrantAnimated(entrant, movement, "main move");
 
-  if (!entrant.finished && racer.id === "portal-pup" && hasOpponentAt(entrant.pos, entrant.playerId)) {
-    await showAbility(entrant, racer.powerName, "Landing on a rival opens a portal for 2 extra movement.");
-    await moveEntrantAnimated(entrant, 2, "Blink");
-    notes.push("blinked +2");
+  if (racer.id === "gear-goblin" && naturalRoll !== null && naturalRoll <= tune.trigger && entrant.charge < tune.cap) {
+    entrant.charge += 1;
+    await showAbility(entrant, racer.powerName, `Low roll. Gears tuned: +${entrant.charge} on later rolls.`);
+  }
+
+  let blinks = 0;
+  while (!entrant.finished && racer.id === "portal-pup" && blinks < 3 && hasOpponentAt(entrant.pos, entrant.playerId)) {
+    blinks += 1;
+    await showAbility(entrant, racer.powerName, blinks > 1 ? `Another rival! Blink again for ${tune.bonus}.` : `Landed on a rival. Blink ${tune.bonus} more.`);
+    await moveEntrantAnimated(entrant, tune.bonus, "Blink");
+    notes.push(`blinked +${tune.bonus}`);
   }
 
   if (!entrant.finished && racer.id === "prism-slime") {
-    const targets = state.entrants.filter((other) => other.playerId !== entrant.playerId && !other.finished && other.pos === entrant.pos);
+    const targets = state.entrants.filter((other) => other !== entrant && !other.finished && Math.abs(other.pos - entrant.pos) <= tune.range && other.pos > 0);
     if (targets.length) {
-      await showAbility(entrant, racer.powerName, `${targets.length} rival${targets.length === 1 ? "" : "s"} slide back 1.`);
-      for (const target of targets) await moveEntrantAnimated(target, -1, "Slick Landing");
+      await showAbility(entrant, racer.powerName, `${targets.length} rival${targets.length === 1 ? "" : "s"} slide back ${tune.push}.`);
+      for (const target of targets) await moveEntrantAnimated(target, -tune.push, "Slick Landing");
       notes.push("slid rivals back");
     }
   }
 
-  if (racer.id === "quake-beetle" && naturalRoll === 6) {
-    const targets = state.entrants.filter((other) => other.playerId !== entrant.playerId && !other.finished && Math.abs(other.pos - entrant.pos) <= 1);
+  if (racer.id === "quake-beetle" && naturalRoll >= tune.min) {
+    const targets = state.entrants.filter((other) => other !== entrant && !other.finished && Math.abs(other.pos - entrant.pos) <= tune.range && other.pos > 0);
     if (targets.length) {
-      await showAbility(entrant, racer.powerName, `${targets.length} nearby rival${targets.length === 1 ? "" : "s"} slide back 1.`);
-      for (const target of targets) await moveEntrantAnimated(target, -1, "Ground Pound");
+      await showAbility(entrant, racer.powerName, `${targets.length} nearby rival${targets.length === 1 ? "" : "s"} slide back ${tune.push}.`);
+      for (const target of targets) await moveEntrantAnimated(target, -tune.push, "Ground Pound");
       notes.push("shook rivals back");
     }
   }
 
-  if (!entrant.finished && racer.id === "pepper-pixie" && !entrant.crossedTwenty && startPos < 20 && entrant.pos >= 20) {
+  if (!entrant.finished && racer.id === "pepper-pixie" && !entrant.crossedTwenty && startPos < tune.at && entrant.pos >= tune.at) {
     entrant.crossedTwenty = true;
-    await showAbility(entrant, racer.powerName, "Crossing space 20 triggers a 3-space surge.");
-    await moveEntrantAnimated(entrant, 3, "Spicy Finish");
-    notes.push("surged +3");
+    await showAbility(entrant, racer.powerName, `Crossing space ${tune.at} triggers a ${tune.bonus}-space surge.`);
+    await moveEntrantAnimated(entrant, tune.bonus, "Spicy Finish");
+    notes.push(`surged +${tune.bonus}`);
+  }
+
+  if (racer.id === "nap-dragon" && naturalRoll >= tune.nap && !entrant.finished) {
+    entrant.napping = true;
+    notes.push("will nap");
   }
 
   if (!entrant.finished) await applyTrackEffectAnimated(entrant);
+  if (!entrant.finished) await triggerBubbleBounce(entrant);
   if (naturalRoll === 6) await triggerEchoFoxAnimated(entrant.playerId);
   state.previousNaturalRoll = naturalRoll;
 
   const netMovement = entrant.pos - startPos;
-  addLog(`<strong>${player.name}</strong>'s ${racer.name} ended ${Math.max(0, netMovement)} space${Math.abs(netMovement) === 1 ? "" : "s"} ahead${notes.length ? `, ${notes.join(", ")}` : ""}.`);
+  addLog(`<strong>${escapeHtml(player.name)}</strong>'s ${racer.name} ${netMovement >= 0 ? `moved ${netMovement}` : `slipped back ${-netMovement}`}${notes.length ? ` (${notes.join(", ")})` : ""}.`);
   renderRace();
 
   if (state.finishers.length >= 2) {
@@ -1524,29 +1781,46 @@ async function takeTurn() {
   await finishTurn();
 }
 
+function trailsAllBy(entrant, gap) {
+  const others = state.entrants.filter((other) => other !== entrant && !other.finished);
+  return others.length > 0 && others.every((other) => other.pos - entrant.pos >= gap);
+}
+
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
+}
+
 function hasOpponentAt(position, playerId) {
   return state.entrants.some((other) => other.playerId !== playerId && !other.finished && other.pos === position);
 }
 
-function shadowPathUsesSlipstream(entrant, amount) {
-  if (amount <= 0) return false;
-  const maxPosition = Math.min(TRACK_LENGTH, entrant.pos + amount + state.entrants.length);
-  for (let position = entrant.pos + 1; position <= maxPosition; position += 1) {
-    if (hasOpponentAt(position, entrant.playerId)) return true;
-  }
-  return false;
-}
-
-async function moveShadowCatAnimated(entrant, amount) {
+async function moveShadowCatAnimated(entrant, amount, freeSpaces = 1) {
   let remaining = Math.max(0, amount);
+  let free = freeSpaces;
   let physicalStep = 0;
+  let used = false;
   while (remaining > 0 && entrant.pos < TRACK_LENGTH) {
     const nextPosition = entrant.pos + 1;
     const occupied = hasOpponentAt(nextPosition, entrant.playerId);
     physicalStep += 1;
-    if (!occupied) remaining -= 1;
+    if (occupied && free > 0 && remaining > 1) {
+      free -= 1;
+      if (!used) {
+        used = true;
+        await showAbility(entrant, racerById(entrant.racerId).powerName, "Slipped through a crowded space for free.");
+      }
+    } else remaining -= 1;
     await stepEntrantTo(entrant, nextPosition, physicalStep, 1);
     if (entrant.finished) break;
+  }
+}
+
+async function triggerBubbleBounce(mover) {
+  const witches = state.entrants.filter((other) => other !== mover && !other.finished && other.racerId === "bubble-witch" && other.pos === mover.pos && other.pos > 0);
+  for (const witch of witches) {
+    const amount = racerById("bubble-witch").tune.bounce;
+    await showAbility(witch, racerById("bubble-witch").powerName, `A rival landed on the bubble. Bounce forward ${amount}.`);
+    await moveEntrantAnimated(witch, amount, "Bubble Bounce");
   }
 }
 
@@ -1605,31 +1879,34 @@ async function applyTrackEffectAnimated(entrant) {
   }
 
   if (effect.type === "boost") {
-    await showEffect("⬆", `Boost space ${effect.label}`, "boost");
+    await showEffect("boost", `Boost space: ${effect.label}`);
     await moveEntrantAnimated(entrant, effect.amount, "boost space");
   } else if (effect.type === "setback") {
-    await showEffect("⬇", `Setback space ${effect.label}`, "setback");
+    await showEffect("setback", `Setback space: ${effect.label}`);
     await moveEntrantAnimated(entrant, effect.amount, "setback space");
   } else if (effect.type === "trip") {
-    await showEffect("💫", "Trip space", "trip");
+    await showEffect("trip", "Trip space: lose the next move");
     entrant.tripped = true;
     renderRace();
   }
 }
 
 async function triggerEchoFoxAnimated(sourcePlayerId) {
-  const foxes = state.entrants.filter((entrant) => entrant.playerId !== sourcePlayerId && !entrant.finished && entrant.racerId === "echo-fox");
+  const source = state.entrants.find((entrant) => entrant.playerId === sourcePlayerId);
+  const foxes = state.entrants.filter((entrant) => !entrant.finished && entrant.racerId === "echo-fox" && (entrant.playerId === sourcePlayerId || (source && source.pos > entrant.pos)));
   for (const entrant of foxes) {
-    await showAbility(entrant, racerById(entrant.racerId).powerName, "Another runner rolled a natural 6, so Echo Fox moves 1.");
-    await moveEntrantAnimated(entrant, 1, "Resonance");
-    addLog(`<strong>Echo Fox</strong> moved 1 from Resonance.`);
+    const tune = racerById(entrant.racerId).tune;
+    const amount = entrant.playerId === sourcePlayerId ? tune.own : tune.echo;
+    await showAbility(entrant, racerById(entrant.racerId).powerName, entrant.playerId === sourcePlayerId ? `Its own 6 echoes for ${amount} more.` : `A rival ahead rolled a 6. Echo Fox moves ${amount}.`);
+    await moveEntrantAnimated(entrant, amount, "Resonance");
+    addLog(`<strong>Echo Fox</strong> moved ${amount} from Resonance.`);
   }
 }
 
 async function finishTurn() {
   state.motionPlayerId = null;
   renderRace();
-  await wait(560);
+  await wait(420);
   state.busy = false;
   advanceTurn();
 }
@@ -1649,90 +1926,23 @@ function advanceTurn() {
   maybeRunBotTurn();
 }
 
-async function endRace() {
-  state.raceOver = true;
-  state.motionPlayerId = null;
-  renderRace();
-  await wait(850);
-  showRaceResults();
-}
-
-function showRaceResults() {
-  const points = RACE_POINTS[state.raceNumber];
-  state.finishers.slice(0, 2).forEach((entrant, index) => {
-    playerById(entrant.playerId).score += points[index];
-  });
-  state.phase = "results";
-  renderRaceResults();
-}
-
-function renderRaceResults() {
-  const points = RACE_POINTS[state.raceNumber];
-  const first = state.finishers[0];
-  const second = state.finishers[1];
-  app.innerHTML = `
-    <section class="panel">
-      <p class="eyebrow">Race ${state.raceNumber + 1} complete</p>
-      <h2>The podium is set</h2>
-      <div class="race-result-grid">
-        ${podiumHtml(first, 1, points[0])}
-        ${podiumHtml(second, 2, points[1])}
-      </div>
-      <div class="score-list">${[...state.players].sort((a, b) => b.score - a.score).map((player) => scoreBoxHtml(player)).join("")}</div>
-      <div style="margin-top:18px">
-        ${canAdvanceGame() ? `<button id="nextRaceButton" class="primary-button" type="button">${state.raceNumber === 3 ? "Show final standings" : "Prepare next race"}</button>` : `<div class="waiting-pulse">Waiting for the host to continue...</div>`}
-      </div>
-    </section>`;
-  const nextButton = document.getElementById("nextRaceButton");
-  if (nextButton) nextButton.addEventListener("click", () => {
-    audio.playUi();
-    if (state.raceNumber === 3) showFinalResults();
-    else {
-      state.raceNumber += 1;
-      beginRaceSelection();
-    }
-  });
-  network.broadcastState();
-}
-
-function podiumHtml(entrant, place, points) {
-  if (!entrant) return "";
-  const player = playerById(entrant.playerId);
-  const racer = racerById(entrant.racerId);
-  return `<div class="podium-card"><div class="place">${place === 1 ? "First place" : "Second place"}</div><div class="podium-icon">${racer.icon}</div><h3 style="color:${player.color}">${player.name}</h3><p>${racer.name}</p><strong>+${points} points</strong></div>`;
-}
-
-function showFinalResults() {
-  state.phase = "final";
-  renderFinalResults();
-}
-
-function renderFinalResults() {
-  const standings = [...state.players].sort((a, b) => b.score - a.score);
-  const topScore = standings[0].score;
-  const winners = standings.filter((player) => player.score === topScore);
-  app.innerHTML = `
-    <section class="panel">
-      <p class="eyebrow">League complete</p>
-      <h2>${winners.length > 1 ? "Shared victory" : `${winners[0].name} wins the Arcane Dash League`}</h2>
-      <p class="sidebar-note">Four drafts, four runners, four races, and one very strange final table.</p>
-      <div class="final-table">
-        ${standings.map((player, index) => `<div class="final-row ${player.score === topScore ? "winner" : ""}"><div class="rank">#${index + 1}</div><div><strong style="color:${player.color}">${player.name}</strong><div class="team-icons" style="margin-top:7px">${player.team.map((slot) => `<span class="team-icon">${racerById(slot.racerId).icon}</span>`).join("")}</div></div><div class="final-score">${player.score} pts</div></div>`).join("")}
-      </div>
-      ${canAdvanceGame() ? `<button id="playAgainButton" class="primary-button" type="button">${network.online ? "Return everyone to lobby" : "Play again"}</button>` : `<div class="waiting-pulse">Waiting for the host...</div>`}
-    </section>`;
-  const playAgainButton = document.getElementById("playAgainButton");
-  if (playAgainButton) playAgainButton.addEventListener("click", async () => {
-    audio.playUi();
-    if (network.online) {
-      try {
-        await network.resetLobby();
-      } catch (error) {
-        showNetworkError(error);
-      }
-    } else renderSetup();
-  });
-  network.broadcastState();
-}
 
 renderSetup();
+
+// Online lobbies need the Node server. On static hosting, fall back to same-screen play quietly.
+if (network.supported) {
+  const probe = typeof AbortController === "function" ? new AbortController() : null;
+  const timer = window.setTimeout(() => probe?.abort(), 4000);
+  fetch("/api/info", { signal: probe?.signal, cache: "no-store" })
+    .then((response) => {
+      if (!response.ok) throw new Error("No lobby server");
+    })
+    .catch(() => {
+      network.supported = false;
+      if (state.phase === "setup") {
+        if (setupMode !== "local") setupMode = "local";
+        renderSetup();
+      }
+    })
+    .finally(() => window.clearTimeout(timer));
+}
