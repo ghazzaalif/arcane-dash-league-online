@@ -83,8 +83,8 @@ See `DEPLOYMENT.md` for Docker, managed Node hosting, reverse-proxy, and operati
 - `index.html` - game page and dialogs
 - `styles.css` - responsive interface, race board, lobby, and animations
 - `game.js` - rules, UI, audio, host authority, online sessions, and synchronization
-- `runners-art.js` - original SVG portraits for all 24 runners
-- `maps.js` - the four illustrated race maps (landscape on desktop, portrait on phones)
+- `runners-art.js` - original 16x16 pixel-art sprites for all 24 runners
+- `maps.js` - the compact race board: a loop of 31 tiles plus a start/finish gate, with four pixel-art themes (10x8 tiles on desktop, 8x10 on phones)
 - `fonts/` - self-hosted Big Shoulders Display and Atkinson Hyperlegible (SIL Open Font License)
 - `server.js` - public HTTP server, lobby API, authentication, SSE relay, and health checks
 - `Dockerfile` - production container image
@@ -92,6 +92,33 @@ See `DEPLOYMENT.md` for Docker, managed Node hosting, reverse-proxy, and operati
 - `Procfile` - generic managed Node process declaration
 - `.env.example` - production environment template
 - `DEPLOYMENT.md` - deployment and operations guide
+
+## Testing
+
+Every change is tested before it reaches `main` (and so before Render deploys it).
+
+```bash
+npm ci
+npm test              # syntax check, rules and asset tests, server/API tests (~5s)
+npm run test:balance  # seeded balance simulation across 2, 3 and 4-team games (~1 min)
+npm run test:e2e      # Playwright play-throughs on desktop and phone (~2 min)
+npm run test:all      # everything
+```
+
+The first `test:e2e` run needs a browser: `npx playwright install chromium`.
+
+- `tests/unit/rules.test.js` drives the real `game.js` with scripted dice: draft, selection,
+  scoring, track spaces and every runner power.
+- `tests/unit/assets.test.js` checks the board layout (compact, no overlapping tiles, fits on
+  screen) and that every runner has a valid 16x16 sprite.
+- `tests/balance/` fails if any runner drifts outside 0.84x-1.16x of a fair share of points.
+- `tests/server/` covers static files, security headers and the lobby API.
+- `tests/e2e/` plays a full four-race game, a human turn on desktop and phone, the dialogs,
+  an online host/guest game and the static-hosting fallback.
+
+GitHub Actions runs all of it on every pull request and push to `main`. Feature branches are
+also published to GitHub Pages as a playable preview (same-screen play only) once their
+tests pass.
 
 ## Runner balance
 

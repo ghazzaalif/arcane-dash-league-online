@@ -55,7 +55,9 @@ for (const portrait of [false, true]) {
     assert.ok(area / trackArea <= 3.6, `board is ${(area / trackArea).toFixed(1)}x the track's own area: too sprawling`);
     const ratio = w / h;
     assert.ok(ratio >= 0.6 && ratio <= 1.6, `aspect ratio ${ratio.toFixed(2)} should be near square`);
-    assert.ok(dist(ArcaneMaps.spacePoint(0, portrait), ArcaneMaps.spacePoint(game.TRACK_LENGTH, portrait)) <= ArcaneMaps.TILE * 1.6, "the track loops back so the finish meets the start");
+    // A closed loop on a square grid always has an even number of slots, so the 31 spaces
+    // share the loop with one start/finish gate tile: finish and start sit either side of it.
+    assert.ok(dist(ArcaneMaps.spacePoint(0, portrait), ArcaneMaps.spacePoint(game.TRACK_LENGTH, portrait)) <= ArcaneMaps.TILE * 2.05, "the track loops back so the finish meets the start");
   });
 }
 

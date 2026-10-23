@@ -46,6 +46,7 @@ body {
 button, input, select { font: inherit; color: inherit; }
 h1, h2, h3, p { margin: 0; }
 img { display: block; }
+.runner-art { image-rendering: pixelated; }
 [hidden] { display: none !important; }
 :focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
 
@@ -318,21 +319,23 @@ input:focus { border-color: var(--gold); }
 .board-map {
   overflow: hidden;
   border: 3px solid var(--ink);
-  border-radius: var(--radius);
+  border-radius: 8px;
   box-shadow: 0 0 0 1px var(--line-strong);
 }
 .map-svg { display: block; width: 100%; height: auto; }
-.map-num { font-family: var(--display); font-weight: 900; font-size: 24px; text-anchor: middle; }
-.map-label { font-family: var(--display); font-weight: 900; font-size: 17px; text-anchor: middle; letter-spacing: 0.04em; fill: var(--ink); }
-.map-badge { font-family: var(--display); font-weight: 900; font-size: 15px; text-anchor: middle; fill: var(--ink); }
+.map-num { font-family: var(--display); font-weight: 900; font-size: 40px; text-anchor: middle; fill: var(--ink); }
+.map-label { font-family: var(--display); font-weight: 900; font-size: 22px; text-anchor: middle; letter-spacing: 0.04em; fill: var(--ink); }
+.map-title { font-family: var(--display); font-weight: 900; text-anchor: middle; letter-spacing: 0.04em; }
+.map-mood { font-family: var(--display); font-weight: 900; font-size: 22px; text-anchor: middle; letter-spacing: 0.14em; opacity: 0.85; }
+.map-badge { font-family: var(--display); font-weight: 900; font-size: 34px; text-anchor: middle; }
 .board-tokens { position: absolute; inset: 0; pointer-events: none; }
 
 .token {
   position: absolute;
   left: 0;
   top: 0;
-  width: calc(46 * var(--u));
-  height: calc(46 * var(--u));
+  width: calc(var(--size, 64) * var(--u));
+  height: calc(var(--size, 64) * var(--u));
   min-width: 22px;
   min-height: 22px;
   padding: 0;
@@ -503,7 +506,7 @@ button.runner-card:disabled { cursor: default; }
   padding: 16px 16px 0;
   background: linear-gradient(var(--tint) 0 62%, transparent 62%);
 }
-.runner-card-art { width: 92px; height: 92px; filter: drop-shadow(0 4px 0 rgba(10, 8, 20, 0.35)); }
+.runner-card-art { width: 80px; height: 80px; filter: drop-shadow(0 4px 0 rgba(10, 8, 20, 0.35)); }
 .role-chip {
   align-self: flex-start;
   padding: 3px 9px;
@@ -586,7 +589,7 @@ button.runner-card:disabled { cursor: default; }
 
 .turn-panel { padding: 16px; border: 2px solid var(--team); }
 .turn-who { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px; align-items: center; }
-.turn-art { width: 84px; height: 84px; }
+.turn-art { width: 80px; height: 80px; }
 .turn-names { display: grid; gap: 2px; min-width: 0; }
 .turn-team { display: inline-flex; align-items: center; gap: 7px; font-weight: 700; font-size: 0.9rem; color: var(--muted); }
 .turn-team .team-swatch { width: 11px; height: 11px; }
@@ -680,7 +683,7 @@ button.runner-card:disabled { cursor: default; }
 }
 .podium-spot.place-1 { padding-top: 30px; }
 .podium-art { width: 120px; height: 120px; }
-.place-1 .podium-art { width: 150px; height: 150px; }
+.place-1 .podium-art { width: 160px; height: 160px; }
 .podium-spot strong { font-family: var(--display); font-weight: 900; font-size: 1.6rem; line-height: 1; text-transform: uppercase; }
 .podium-team { color: var(--team); font-weight: 700; }
 .podium-points { font-family: var(--display); font-weight: 900; font-size: 2.2rem; line-height: 1; color: var(--gold); }
@@ -805,7 +808,7 @@ dialog[open] { animation: dialog-in 200ms var(--ease-out); }
   .card-grid { grid-template-columns: repeat(auto-fill, minmax(156px, 1fr)); gap: 10px; }
   .runner-card { padding: 0 12px 12px; }
   .runner-card-top { margin: 0 -12px 6px; padding: 12px 12px 0; }
-  .runner-card-art { width: 70px; height: 70px; }
+  .runner-card-art { width: 60px; height: 60px; }
   .runner-card-name { font-size: 1.3rem; }
   .runner-card-power { font-size: 0.88rem; }
   .next-track { grid-template-columns: 1fr; }
@@ -816,7 +819,7 @@ dialog[open] { animation: dialog-in 200ms var(--ease-out); }
   .race-log { order: 3; width: 100%; }
   .turn-panel { padding: 12px; background: #141b2f; box-shadow: 0 -6px 24px rgba(5, 6, 14, 0.6); }
   .turn-who { grid-template-columns: auto minmax(0, 1fr); gap: 10px; }
-  .turn-art { width: 54px; height: 54px; }
+  .turn-art { width: 60px; height: 60px; }
   .turn-runner { font-size: 1.3rem; }
   .turn-power { font-size: 0.82rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .turn-action { margin-top: 10px; gap: 10px; }
@@ -828,7 +831,7 @@ dialog[open] { animation: dialog-in 200ms var(--ease-out); }
   .callout strong { font-size: 1.15rem; }
   .callout-detail { font-size: 0.82rem; }
   .podium-spot { width: calc(50% - 8px); padding: 14px 10px; }
-  .podium-art { width: 84px; height: 84px; }
+  .podium-art { width: 80px; height: 80px; }
   .place-1 .podium-art { width: 100px; height: 100px; }
   .podium-spot strong { font-size: 1.2rem; }
   .league-row { grid-template-columns: 24px minmax(0, 1fr) auto; }
