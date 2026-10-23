@@ -77,6 +77,33 @@ See `DEPLOYMENT.md` for Docker, managed Node hosting, reverse-proxy, and operati
 | `LOBBY_TTL_MINUTES` | `360` | Idle lobby lifetime |
 | `BODY_LIMIT_KB` | `768` | Maximum JSON request size |
 | `NODE_ENV` | `development` | Runtime environment label |
+| `UMAMI_WEBSITE_ID` | off | Umami website ID (UUID). Setting it turns analytics on |
+| `UMAMI_SCRIPT_URL` | `https://cloud.umami.is/script.js` | Tracker script; change for self-hosted Umami |
+| `UMAMI_HOST_URL` | script's host | Where events are sent, if not the script's host |
+| `UMAMI_DOMAINS` | `PUBLIC_ORIGIN` host | Comma-separated hostnames to count (keeps localhost out) |
+
+## Analytics (Umami)
+
+Analytics is off unless `UMAMI_WEBSITE_ID` is set. Then the server adds the
+[Umami](https://umami.is) tracker to the page and opens the Content-Security-Policy only to
+the Umami hosts it needs. Umami is cookieless, so no consent banner is needed. Query strings
+are never sent (invite links carry the lobby code), browsers with Do Not Track are skipped,
+and no team names or other typed text are sent.
+
+Custom events, sent once per game by the solo player or online host:
+
+| Event | Data | Answers |
+| --- | --- | --- |
+| `game-start` | `mode` (local/online), `teams`, `humans`, `bots` | How many games start, and in which setup |
+| `draft-pick` | `runner`, `role`, `wave`, `mode` (human picks only) | Which runners players actually want |
+| `race-finish` | `race`, `track` (calm/chaos), `teams`, `first`, `second`, `winnerIsBot` | Which runners win real races |
+| `game-finish` | `mode`, `teams`, `humans`, `bots`, `winner` (human/bot/tie), `topScore` | Completion rate (vs `game-start`), human win rate |
+| `play-again` | `mode` | Replay rate |
+| `lobby-create` | `seats`, `bots` | Online play uptake |
+| `lobby-join` | `rejoin` | Invite conversion (vs `lobby-create`) |
+| `rules-open`, `runners-open` | none | Whether the help is used |
+
+Pageviews are tracked automatically. The GitHub Pages preview has no server, so it is never tracked.
 
 ## Files
 
@@ -112,7 +139,9 @@ The first `test:e2e` run needs a browser: `npx playwright install chromium`.
 - `tests/unit/assets.test.js` checks the board layout (compact, no overlapping tiles, fits on
   screen) and that every runner has a valid 16x16 sprite.
 - `tests/balance/` fails if any runner drifts outside 0.84x-1.16x of a fair share of points.
-- `tests/server/` covers static files, security headers and the lobby API.
+- `tests/server/` covers static files, security headers, the lobby API and the Umami
+  tag/CSP wiring.
+- `tests/unit/analytics.test.js` plays a full game and checks which analytics events fire.
 - `tests/e2e/` plays a full four-race game, a human turn on desktop and phone, the dialogs,
   an online host/guest game and the static-hosting fallback.
 
