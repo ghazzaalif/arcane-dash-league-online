@@ -1,12 +1,14 @@
 name: Preview
 
-# Publishes feature branches to GitHub Pages as a playable preview (same-screen play;
+# Publishes a branch to GitHub Pages as a playable preview (same-screen play;
 # online lobbies need the Node server, so they switch off there). The live Render
 # site only changes when main changes.
+#
+# One-time setup: repo Settings > Pages > Source: "GitHub Actions", and allow the
+# branch under Settings > Environments > github-pages. Then run this workflow from
+# the Actions tab and pick the branch to preview.
 
 on:
-  push:
-    branches-ignore: [main]
   workflow_dispatch:
 
 permissions:

@@ -116,9 +116,9 @@ The first `test:e2e` run needs a browser: `npx playwright install chromium`.
 - `tests/e2e/` plays a full four-race game, a human turn on desktop and phone, the dialogs,
   an online host/guest game and the static-hosting fallback.
 
-GitHub Actions runs all of it on every pull request and push to `main`. Feature branches are
-also published to GitHub Pages as a playable preview (same-screen play only) once their
-tests pass.
+GitHub Actions runs all of it on every pull request and push to `main`. The Preview workflow
+can publish any branch to GitHub Pages as a playable preview (same-screen play only) once its
+tests pass; see the setup note at the top of `.github/workflows/preview.yml`.
 
 ## Runner balance
 
