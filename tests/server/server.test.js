@@ -55,10 +55,12 @@ test("serves the page and every asset it references", async () => {
     assert.equal(res.status, 200, `${ref} should be served`);
   }
   const css = await request("GET", "/styles.css");
-  for (const font of css.text.matchAll(/url\("([^"]+)"\)/g)) {
-    const res = await request("GET", `/${font[1]}`);
-    assert.equal(res.status, 200, `${font[1]} should be served`);
-    assert.equal(res.headers["content-type"], "font/woff2");
+  const files = [...css.text.matchAll(/url\("([^"]+)"\)/g)].map((m) => m[1]).filter((url) => !url.startsWith("data:"));
+  assert.ok(files.some((url) => url.endsWith(".woff2")), "stylesheet loads its fonts");
+  for (const file of files) {
+    const res = await request("GET", `/${file}`);
+    assert.equal(res.status, 200, `${file} should be served`);
+    if (file.endsWith(".woff2")) assert.equal(res.headers["content-type"], "font/woff2");
   }
 });
 

@@ -1394,6 +1394,20 @@ function paintRace() {
   }
 }
 
+// Pips for 1-8 on a 3x3 grid; anything else (?, z for a nap, - for standing up) shows as text.
+function dieFaceHtml(value) {
+  const face = Number(value);
+  if (Number.isInteger(face) && face >= 1 && face <= 8) return `<span id="dieValue" class="pips" data-face="${face}">${"<i></i>".repeat(9)}</span>`;
+  return `<span id="dieValue" class="die-text">${escapeHtml(String(value))}</span>`;
+}
+
+function setDieFace(element, value) {
+  if (!element) return;
+  element.className = "pips";
+  element.dataset.face = String(value);
+  if (element.children.length !== 9) element.innerHTML = "<i></i>".repeat(9);
+}
+
 function turnCardHtml(entrant) {
   if (!entrant || state.raceOver) {
     return `<div class="panel turn-panel"><p class="turn-wait">Race complete. Tallying the podium...</p></div>`;
@@ -1418,7 +1432,7 @@ function turnCardHtml(entrant) {
       </div>
       <div class="turn-action">
         <div class="die-wrap ${state.diceRolling ? "is-rolling" : ""}">
-          <div class="die ${pips} ${value === "" ? "is-idle" : ""}" aria-live="polite" aria-label="${value ? `Die shows ${value}` : "Die ready"}"><span id="dieValue">${escapeHtml(String(shown))}</span></div>
+          <div class="die ${pips} ${value === "" ? "is-idle" : ""}" aria-live="polite" aria-label="${value ? `Die shows ${value}` : "Die ready"}">${dieFaceHtml(shown)}</div>
           <span class="die-caption">${escapeHtml(state.diceCaption)}</span>
         </div>
         ${controllable
@@ -1569,7 +1583,7 @@ async function animateDice(finalValue, sides = 6, caption = "Rolling") {
   const cycles = 8;
   for (let index = 0; index < cycles; index += 1) {
     const dieValue = document.getElementById("dieValue");
-    if (dieValue) dieValue.textContent = String(randomInt(1, sides));
+    if (dieValue) setDieFace(dieValue, randomInt(1, sides));
     audio.playDice();
     await wait(62 + index * 6);
   }

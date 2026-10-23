@@ -166,3 +166,28 @@ test("static hosting: online modes switch off, local play still works", async ({
   await page.click("#startButton");
   await expect(page.locator(".runner-card").first()).toBeVisible();
 });
+
+test("small phones (360px): no screen scrolls sideways", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "phone", "phone layout check");
+  await page.setViewportSize({ width: 360, height: 740 });
+  await page.clock.install();
+  await page.goto("/");
+  await noHorizontalScroll(page);
+  await page.click('[data-team-count="2"]');
+  await page.click("#startButton");
+  await expect(page.locator(".runner-card").first()).toBeVisible();
+  await noHorizontalScroll(page);
+  await draftAndSelect(page);
+  await page.clock.runFor(1500);
+  await noHorizontalScroll(page);
+  await page.click("#charactersButton");
+  await noHorizontalScroll(page);
+});
+
+test("pixel display font loads and is used for headings", async ({ page }) => {
+  await page.goto("/");
+  await page.evaluate(() => document.fonts.ready);
+  expect(await page.evaluate(() => document.fonts.check('20px "Jersey"'))).toBe(true);
+  const family = await page.locator(".hero-title").evaluate((el) => getComputedStyle(el).fontFamily);
+  expect(family).toContain("Jersey");
+});

@@ -24,8 +24,7 @@ const STATIC_FILES = new Map([
   ["/styles.css", "styles.css"],
   ["/runners-art.js", "runners-art.js"],
   ["/maps.js", "maps.js"],
-  ["/fonts/display-800.woff2", "fonts/display-800.woff2"],
-  ["/fonts/display-900.woff2", "fonts/display-900.woff2"],
+  ["/fonts/jersey-15.woff2", "fonts/jersey-15.woff2"],
   ["/fonts/body-400.woff2", "fonts/body-400.woff2"],
   ["/fonts/body-700.woff2", "fonts/body-700.woff2"]
 ]);
