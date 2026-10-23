@@ -81,6 +81,15 @@ docker compose up -d --build
 
 The included Compose file publishes port `4173`. Put HTTPS in front of that port for public production use.
 
+## Optional: Umami analytics
+
+1. In Umami (Cloud at cloud.umami.is, or self-hosted), add a website with your public domain.
+2. Copy its website ID and set `UMAMI_WEBSITE_ID` on the service. For self-hosted Umami, also set
+   `UMAMI_SCRIPT_URL` to your instance's `script.js`.
+3. Redeploy, open the site, and confirm a visitor appears in Umami's realtime view.
+
+Leaving `UMAMI_WEBSITE_ID` unset keeps analytics fully off. See the README for the event list.
+
 ## Verification after deployment
 
 1. Open `/healthz` and confirm it returns `{"ok":true,...}`.
@@ -112,6 +121,6 @@ A process restart removes all lobbies. This is acceptable for short MVP matches,
 - Always use HTTPS in production.
 - Lobby codes identify rooms, but seat actions also require a random session token.
 - Invite links do not contain seat tokens.
-- Security headers restrict framing, external scripts, permissions, and cross-origin resources.
+- Security headers restrict framing, external scripts, permissions, and cross-origin resources. With Umami on, only its script and data hosts are added to the policy.
 - Request limits reduce automated lobby and join abuse.
 - Do not expose the Node port directly when a managed HTTPS endpoint or reverse proxy is available.

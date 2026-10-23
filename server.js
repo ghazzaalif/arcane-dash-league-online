@@ -14,6 +14,7 @@ const MAX_LOBBIES = clampInteger(process.env.MAX_LOBBIES, 10, 10000, 1000);
 const LOBBY_TTL_MS = clampInteger(process.env.LOBBY_TTL_MINUTES, 15, 1440, 360) * 60_000;
 const BODY_LIMIT_BYTES = clampInteger(process.env.BODY_LIMIT_KB, 64, 2048, 768) * 1024;
 const LOBBY_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+const UMAMI = umamiConfig(process.env);
 const lobbies = new Map();
 const rateBuckets = new Map();
 
@@ -53,6 +54,61 @@ function normalizeOrigin(value) {
   }
 }
 
+// Umami analytics is off unless UMAMI_WEBSITE_ID is set. The tracker is cookieless;
+// the script tag is injected into index.html and the CSP is opened only to the
+// Umami origins it needs (script host and data endpoint).
+function umamiConfig(env) {
+  const websiteId = String(env.UMAMI_WEBSITE_ID || "").trim().toLowerCase();
+  if (!websiteId) return null;
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(websiteId)) {
+    console.warn("Warning: UMAMI_WEBSITE_ID is not a valid UUID. Analytics is off.");
+    return null;
+  }
+  let scriptUrl;
+  let hostUrl = "";
+  try {
+    scriptUrl = new URL(String(env.UMAMI_SCRIPT_URL || "https://cloud.umami.is/script.js").trim());
+    if (env.UMAMI_HOST_URL) hostUrl = new URL(String(env.UMAMI_HOST_URL).trim()).origin;
+  } catch (error) {
+    console.warn("Warning: UMAMI_SCRIPT_URL or UMAMI_HOST_URL is not a valid URL. Analytics is off.");
+    return null;
+  }
+  if (!/^https?:$/.test(scriptUrl.protocol)) {
+    console.warn("Warning: UMAMI_SCRIPT_URL must be http(s). Analytics is off.");
+    return null;
+  }
+  const scriptOrigin = scriptUrl.origin;
+  const connectOrigins = new Set([hostUrl || scriptOrigin]);
+  // Umami Cloud serves the script from cloud.umami.is but receives data on gateway.umami.is.
+  if (!hostUrl && scriptUrl.hostname === "cloud.umami.is") connectOrigins.add("https://gateway.umami.is");
+  const domains = String(env.UMAMI_DOMAINS || (PUBLIC_ORIGIN ? new URL(PUBLIC_ORIGIN).hostname : ""))
+    .split(",").map((entry) => entry.trim().toLowerCase()).filter((entry) => /^[a-z0-9.-]+$/.test(entry)).join(",");
+  const attrs = [
+    `defer src="${escapeAttr(scriptUrl.href)}"`,
+    `data-website-id="${websiteId}"`,
+    hostUrl ? `data-host-url="${escapeAttr(hostUrl)}"` : "",
+    domains ? `data-domains="${domains}"` : "",
+    // Invite links carry the lobby code in ?lobby=, so never send query strings.
+    `data-exclude-search="true"`,
+    `data-do-not-track="true"`
+  ].filter(Boolean);
+  return {
+    scriptOrigin,
+    connectOrigins: [...connectOrigins],
+    tag: `<script ${attrs.join(" ")}></script>`
+  };
+}
+
+function escapeAttr(value) {
+  return String(value).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function contentSecurityPolicy() {
+  const scriptSrc = ["'self'", ...(UMAMI ? [UMAMI.scriptOrigin] : [])];
+  const connectSrc = ["'self'", ...(UMAMI ? UMAMI.connectOrigins : [])];
+  return `default-src 'self'; script-src ${[...new Set(scriptSrc)].join(" ")}; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src ${[...new Set(connectSrc)].join(" ")}; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'`;
+}
+
 function requestOrigin(req) {
   if (PUBLIC_ORIGIN) return PUBLIC_ORIGIN;
   const forwardedProto = String(req.headers["x-forwarded-proto"] || "").split(",")[0].trim();
@@ -73,10 +129,7 @@ function applySecurityHeaders(req, res) {
   res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()");
   res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
   res.setHeader("Cross-Origin-Resource-Policy", "same-origin");
-  res.setHeader(
-    "Content-Security-Policy",
-    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
-  );
+  res.setHeader("Content-Security-Policy", contentSecurityPolicy());
   const forwardedProto = String(req.headers["x-forwarded-proto"] || "").split(",")[0].trim();
   if (forwardedProto === "https" || PUBLIC_ORIGIN.startsWith("https://")) {
     res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
@@ -245,6 +298,10 @@ function serveStatic(req, res, pathname) {
     return;
   }
   const filePath = path.join(ROOT, filename);
+  if (filename === "index.html" && UMAMI) {
+    serveIndexWithAnalytics(req, res, filePath);
+    return;
+  }
   fs.stat(filePath, (error, stats) => {
     if (error || !stats.isFile()) {
       json(res, 404, { error: "Not found." });
@@ -264,6 +321,29 @@ function serveStatic(req, res, pathname) {
     res.writeHead(200, headers);
     if (req.method === "HEAD") return res.end();
     fs.createReadStream(filePath).pipe(res);
+  });
+}
+
+function serveIndexWithAnalytics(req, res, filePath) {
+  fs.readFile(filePath, "utf8", (error, html) => {
+    if (error) {
+      json(res, 404, { error: "Not found." });
+      return;
+    }
+    const body = Buffer.from(html.replace("</head>", `  ${UMAMI.tag}\n</head>`), "utf8");
+    const headers = {
+      "Content-Type": MIME_TYPES[".html"],
+      "Content-Length": body.length,
+      "Cache-Control": "no-cache",
+      ETag: `W/"${crypto.createHash("sha1").update(body).digest("base64url").slice(0, 16)}"`
+    };
+    if (req.headers["if-none-match"] === headers.ETag) {
+      res.writeHead(304, headers);
+      res.end();
+      return;
+    }
+    res.writeHead(200, headers);
+    res.end(req.method === "HEAD" ? undefined : body);
   });
 }
 
@@ -562,6 +642,7 @@ server.listen(PORT, HOST, () => {
   console.log(`Open: ${origin}`);
   console.log(`Health: ${origin}/healthz`);
   console.log(`Environment: ${NODE_ENV}`);
+  console.log(`Analytics: ${UMAMI ? `Umami (${UMAMI.scriptOrigin})` : "off"}`);
   if (!PUBLIC_ORIGIN && NODE_ENV === "production") {
     console.warn("Warning: PUBLIC_ORIGIN is not set. Share links will use the incoming request host.");
   }

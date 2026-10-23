@@ -196,6 +196,27 @@ const state = {
   raceOver: false
 };
 
+// Analytics: sends a custom event to Umami when the server injected its tracker
+// (UMAMI_WEBSITE_ID set). A no-op otherwise, and never allowed to break the game.
+// No team names, lobby codes or other player-entered text are sent.
+function track(name, data) {
+  try {
+    const umami = typeof window !== "undefined" ? window.umami : null;
+    if (umami && typeof umami.track === "function") umami.track(name, data);
+  } catch (error) {
+    // Analytics is optional.
+  }
+}
+
+function gameMode() {
+  return network.online ? "online" : "local";
+}
+
+function teamMix() {
+  const bots = state.players.filter((player) => player.isBot).length;
+  return { mode: gameMode(), teams: state.players.length, humans: state.players.length - bots, bots };
+}
+
 function shuffle(items) {
   const copy = [...items];
   for (let i = copy.length - 1; i > 0; i -= 1) {
@@ -278,6 +299,7 @@ const network = {
       fillBots
     }, false);
     this.activate(result.lobby, true, result.sessionToken);
+    track("lobby-create", { seats: Number(maxPlayers) || 4, bots: Boolean(fillBots) });
   },
 
   async joinLobby(name, code) {
@@ -289,6 +311,7 @@ const network = {
     }, false);
     this.activate(result.lobby, result.isHost, result.sessionToken);
     this.recovering = Boolean(result.lobby.started && result.isHost);
+    track("lobby-join", { rejoin: Boolean(result.lobby.started) });
   },
 
   readSessionToken(code) {
@@ -590,13 +613,17 @@ function renderCharacterLibrary(filter = "") {
 }
 
 function openCharacters() {
+  track("runners-open");
   characterSearch.value = "";
   archiveRole = "All";
   renderCharacterLibrary();
   charactersDialog.showModal();
 }
 
-document.getElementById("rulesButton").addEventListener("click", () => rulesDialog.showModal());
+document.getElementById("rulesButton").addEventListener("click", () => {
+  rulesDialog.showModal();
+  track("rules-open");
+});
 document.getElementById("closeRulesButton").addEventListener("click", () => rulesDialog.close());
 document.getElementById("charactersButton").addEventListener("click", openCharacters);
 document.getElementById("closeCharactersButton").addEventListener("click", () => charactersDialog.close());
@@ -938,6 +965,7 @@ async function startHostedGame() {
     }
     state.deck = shuffle(RACERS);
     state.draftWave = 1;
+    track("game-start", teamMix());
     beginDraftWave();
   } catch (error) {
     network.notice = error.message;
@@ -960,6 +988,7 @@ function startGame() {
   }));
   state.deck = shuffle(RACERS);
   state.draftWave = 1;
+  track("game-start", teamMix());
   beginDraftWave();
 }
 
@@ -1027,6 +1056,7 @@ function chooseDraftRacer(racerId) {
   if (index < 0) return;
   const [racer] = state.draftPool.splice(index, 1);
   player.team.push({ racerId: racer.id, used: false });
+  if (!player.isBot) track("draft-pick", { runner: racer.name, role: racer.role, wave: state.draftWave, mode: gameMode() });
   state.draftIndex += 1;
 
   if (state.draftIndex >= state.draftOrder.length) {
@@ -1459,6 +1489,15 @@ function showRaceResults() {
   state.finishers.slice(0, 2).forEach((entrant, index) => {
     playerById(entrant.playerId).score += points[index];
   });
+  const [first, second] = state.finishers;
+  track("race-finish", {
+    race: state.raceNumber + 1,
+    track: isChaosRace(state.raceNumber) ? "chaos" : "calm",
+    teams: state.players.length,
+    first: first ? racerById(first.racerId).name : "",
+    second: second ? racerById(second.racerId).name : "",
+    winnerIsBot: first ? Boolean(playerById(first.playerId).isBot) : false
+  });
   state.phase = "results";
   renderRaceResults();
 }
@@ -1523,6 +1562,13 @@ function renderRaceResults() {
 
 function showFinalResults() {
   state.phase = "final";
+  const topScore = Math.max(...state.players.map((player) => player.score));
+  const winners = state.players.filter((player) => player.score === topScore);
+  track("game-finish", {
+    ...teamMix(),
+    winner: winners.length > 1 ? "tie" : winners[0].isBot ? "bot" : "human",
+    topScore
+  });
   renderFinalResults();
 }
 
@@ -1546,6 +1592,7 @@ function renderFinalResults() {
   const playAgainButton = document.getElementById("playAgainButton");
   if (playAgainButton) playAgainButton.addEventListener("click", async () => {
     audio.playUi();
+    track("play-again", { mode: gameMode() });
     if (network.online) {
       try {
         await network.resetLobby();
