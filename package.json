@@ -5,9 +5,18 @@
   "description": "Deployable online lobby server and browser game for Arcane Dash League",
   "scripts": {
     "start": "node server.js",
-    "check": "node --check server.js && node --check game.js"
+    "check": "node --check server.js && node --check game.js && node --check maps.js && node --check runners-art.js",
+    "test": "npm run check && npm run test:unit && npm run test:server",
+    "test:unit": "node --test tests/unit/*.test.js",
+    "test:server": "node --test tests/server/*.test.js",
+    "test:balance": "node --test tests/balance/*.test.js",
+    "test:e2e": "playwright test",
+    "test:all": "npm test && npm run test:balance && npm run test:e2e"
   },
   "engines": {
     "node": ">=18"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.1"
   }
 }

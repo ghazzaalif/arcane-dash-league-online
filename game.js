@@ -671,9 +671,10 @@ function heroBoardHtml() {
     const [x, y] = ArcaneMaps.spacePoint(space, false);
     const shared = demo.filter((entry) => entry[1] === space);
     const offset = stackOffsets(shared.length)[shared.findIndex((entry) => entry[0] === id)];
-    return `<span class="token is-static" style="--x:${x + offset[0]};--y:${y + offset[1]};--team:${PLAYER_COLORS[team]};--delay:${index * 90}ms"><span class="token-body">${portraitImg(id)}</span></span>`;
+    return `<span class="token is-static" style="--x:${x + offset[0]};--y:${y + offset[1]};--size:${tokenSize(shared.length)};--team:${PLAYER_COLORS[team]};--delay:${index * 90}ms"><span class="token-body">${portraitImg(id)}</span></span>`;
   }).join("");
-  return `<div class="board hero-board" style="--u:0.1cqw" aria-hidden="true"><div class="board-map">${ArcaneMaps.boardSvg(0, { idPrefix: "hero" })}</div><div class="board-tokens">${tokens}</div></div>`;
+  const size = ArcaneMaps.size(false);
+  return `<div class="board hero-board" style="--u:${(100 / size.w).toFixed(5)}cqw;aspect-ratio:${size.w} / ${size.h}" aria-hidden="true"><div class="board-map">${ArcaneMaps.boardSvg(0, { idPrefix: "hero" })}</div><div class="board-tokens">${tokens}</div></div>`;
 }
 
 function renderSetup() {
@@ -1206,11 +1207,18 @@ if (portraitQuery.addEventListener) {
   });
 }
 
+// Where runners sit inside one board tile, and how big they are, by how many share it.
 function stackOffsets(count) {
+  const t = ArcaneMaps.TILE;
   if (count <= 1) return [[0, 0]];
-  if (count === 2) return [[-14, 0], [14, 0]];
-  if (count === 3) return [[-15, 8], [15, 8], [0, -14]];
-  return [[-14, -14], [14, -14], [-14, 14], [14, 14]];
+  if (count === 2) return [[-0.21 * t, 0], [0.21 * t, 0]];
+  if (count === 3) return [[-0.21 * t, 0.17 * t], [0.21 * t, 0.17 * t], [0, -0.19 * t]];
+  return [[-0.21 * t, -0.21 * t], [0.21 * t, -0.21 * t], [-0.21 * t, 0.21 * t], [0.21 * t, 0.21 * t]];
+}
+
+function tokenSize(count) {
+  const t = ArcaneMaps.TILE;
+  return count <= 1 ? 0.74 * t : count === 2 ? 0.52 * t : 0.46 * t;
 }
 
 function renderRace() {
@@ -1306,6 +1314,7 @@ function paintRace() {
       layer.appendChild(token);
       view.tokens.set(entrant.playerId, token);
     }
+    token.style.setProperty("--size", tokenSize(group.length).toFixed(1));
     token.style.setProperty("--x", (x + offset[0]).toFixed(1));
     token.style.setProperty("--y", (y + offset[1]).toFixed(1));
     token.style.zIndex = String(entrant.playerId === activeId ? 30 : 10 + Math.round(y / 10));
@@ -1313,7 +1322,7 @@ function paintRace() {
     token.classList.toggle("is-ability", entrant.playerId === state.abilityFlash?.playerId);
     token.classList.toggle("is-down", Boolean(entrant.tripped || entrant.napping));
     token.classList.toggle("is-finished", entrant.finished);
-    const mapWidth = view.portrait ? 620 : 1000;
+    const mapWidth = ArcaneMaps.size(view.portrait).w;
     token.classList.toggle("tip-below", y < 200);
     token.classList.toggle("tip-left", x > mapWidth - 170);
     token.classList.toggle("tip-right", x < 170);
@@ -1385,6 +1394,20 @@ function paintRace() {
   }
 }
 
+// Pips for 1-8 on a 3x3 grid; anything else (?, z for a nap, - for standing up) shows as text.
+function dieFaceHtml(value) {
+  const face = Number(value);
+  if (Number.isInteger(face) && face >= 1 && face <= 8) return `<span id="dieValue" class="pips" data-face="${face}">${"<i></i>".repeat(9)}</span>`;
+  return `<span id="dieValue" class="die-text">${escapeHtml(String(value))}</span>`;
+}
+
+function setDieFace(element, value) {
+  if (!element) return;
+  element.className = "pips";
+  element.dataset.face = String(value);
+  if (element.children.length !== 9) element.innerHTML = "<i></i>".repeat(9);
+}
+
 function turnCardHtml(entrant) {
   if (!entrant || state.raceOver) {
     return `<div class="panel turn-panel"><p class="turn-wait">Race complete. Tallying the podium...</p></div>`;
@@ -1409,7 +1432,7 @@ function turnCardHtml(entrant) {
       </div>
       <div class="turn-action">
         <div class="die-wrap ${state.diceRolling ? "is-rolling" : ""}">
-          <div class="die ${pips} ${value === "" ? "is-idle" : ""}" aria-live="polite" aria-label="${value ? `Die shows ${value}` : "Die ready"}"><span id="dieValue">${escapeHtml(String(shown))}</span></div>
+          <div class="die ${pips} ${value === "" ? "is-idle" : ""}" aria-live="polite" aria-label="${value ? `Die shows ${value}` : "Die ready"}">${dieFaceHtml(shown)}</div>
           <span class="die-caption">${escapeHtml(state.diceCaption)}</span>
         </div>
         ${controllable
@@ -1560,7 +1583,7 @@ async function animateDice(finalValue, sides = 6, caption = "Rolling") {
   const cycles = 8;
   for (let index = 0; index < cycles; index += 1) {
     const dieValue = document.getElementById("dieValue");
-    if (dieValue) dieValue.textContent = String(randomInt(1, sides));
+    if (dieValue) setDieFace(dieValue, randomInt(1, sides));
     audio.playDice();
     await wait(62 + index * 6);
   }

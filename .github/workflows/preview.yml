@@ -1,0 +1,54 @@
+name: Preview
+
+# Publishes a branch to GitHub Pages as a playable preview (same-screen play;
+# online lobbies need the Node server, so they switch off there). The live Render
+# site only changes when main changes.
+#
+# One-time setup: repo Settings > Pages > Source: "GitHub Actions", and allow the
+# branch under Settings > Environments > github-pages. Then run this workflow from
+# the Actions tab and pick the branch to preview.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages-preview
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Collect the static game
+        run: |
+          mkdir -p _site/fonts
+          cp index.html styles.css game.js maps.js runners-art.js _site/
+          cp fonts/*.woff2 _site/fonts/
+          echo "${GITHUB_REF_NAME} @ ${GITHUB_SHA::7}" > _site/version.txt
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4
