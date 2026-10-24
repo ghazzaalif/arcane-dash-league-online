@@ -50,7 +50,7 @@ test("analytics: a local game sends start, human picks, four races and a finish"
   const names = events.map((event) => event.name);
   assert.deepEqual(names.filter((name) => name === "game-start").length, 1);
   // Data objects come from the game's VM realm, so compare as plain JSON.
-  assert.deepEqual(JSON.parse(JSON.stringify(events.find((event) => event.name === "game-start").data)), { mode: "local", teams: 3, humans: 1, bots: 2 });
+  assert.deepEqual(JSON.parse(JSON.stringify(events.find((event) => event.name === "game-start").data)), { mode: "local", teams: 3, humans: 1, bots: 2, skills: true });
 
   const picks = events.filter((event) => event.name === "draft-pick");
   assert.equal(picks.length, 4, "only the human's four picks are sent, not the bots'");

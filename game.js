@@ -43,6 +43,38 @@ const RACERS = [
   { id: "pepper-pixie", name: "Pepper Pixie", role: "Closer", tagline: "A little too energetic", powerName: "Spicy Finish", power: "The first time you cross space 20, surge 4.", tune: { at: 20, bonus: 4 } }
 ];
 
+// Active skills (test build): one per runner, usable once per race at the start of
+// your own turn, on top of the always-on power above. "Then roll" skills resolve
+// first and the turn carries on as normal; the others change this turn's roll.
+// Tuned like the powers: the `tune` values are what the rules read.
+const ACTIVES = {
+  "clockwork-hare": { name: "Overwind", text: "Roll an extra 4-sided die and add it.", tune: { sides: 4 } },
+  "moss-golem": { name: "Stone Wall", text: "March, then rivals can't move past your space until your next turn.", tune: {} },
+  "comet-kid": { name: "Afterburner", text: "Roll two dice and keep the higher. Flare Up fires on a 5 or 6.", tune: { flare: 5 } },
+  "bubble-witch": { name: "Bubble Trap", text: "The nearest rival ahead (within 10) loses their next move. Then roll.", tune: { range: 10 } },
+  "echo-fox": { name: "Copycat", text: "Instead of rolling, move exactly what the last runner moved.", tune: { bonus: 0 } },
+  "anchor-knight": { name: "Anchor Chain", text: "Pull the nearest rival ahead (within 6) back to your space. Then roll.", tune: { range: 6 } },
+  "lantern-sprite": { name: "Beacon", text: "Gain 2 for each runner ahead of you.", tune: { per: 2 } },
+  "prism-slime": { name: "Refraction", text: "Swap places with the nearest rival ahead (within 4). Then roll.", tune: { range: 4 } },
+  "storm-crow": { name: "Lightning Rod", text: "The leader slides back 5. Then roll.", tune: { push: 5 } },
+  "moon-moth": { name: "Full Moon", text: "Roll a 12-sided die this turn.", tune: { sides: 12 } },
+  "gear-goblin": { name: "Overclock", text: "Gain 2, plus your Tune-Up bonus again.", tune: { bonus: 2 } },
+  "frost-yak": { name: "Deep Freeze", text: "Every rival loses 3 on their next move. Then roll.", tune: { chill: 3 } },
+  "portal-pup": { name: "Portal", text: "Instead of rolling, warp onto the nearest rival ahead (within 5). Blink still fires.", tune: { range: 5 } },
+  "quake-beetle": { name: "Earthquake", text: "Every rival on the track slides back 3. Then roll.", tune: { push: 3 } },
+  "lucky-turnip": { name: "Lucky Seven", text: "Instead of rolling, move exactly 7.", tune: { value: 7 } },
+  "shadow-cat": { name: "Pounce", text: "Gain 3 for every rival you pass this turn.", tune: { per: 3 } },
+  "crown-crab": { name: "Royal Decree", text: "Gain 2 for each rival behind you.", tune: { per: 2 } },
+  "nap-dragon": { name: "Wide Awake", text: "Roll the d8 twice and keep the higher. Works while napping (an 8 still naps).", tune: {} },
+  "spark-snail": { name: "Discharge", text: "Gain 1 for every turn you've taken this race (max 3).", tune: { max: 3 } },
+  "wisp-twins": { name: "Twin Swap", text: "On an even turn, the dim twin stays home: you lose nothing.", tune: {} },
+  "river-otter": { name: "Whirlpool", text: "Pull every rival within 4 ahead back onto your space. Then roll.", tune: { range: 4 } },
+  "meteor-mouse": { name: "Early Launch", text: "Double this roll if you're 5+ behind the leader.", tune: { gap: 5 } },
+  "mirror-owl": { name: "Owl's Eye", text: "Roll three dice and keep the highest, plus 1.", tune: { dice: 3, bonus: 1 } },
+  "pepper-pixie": { name: "Hot Sauce", text: "Gain 2, or 4 once you're on space 20 or later.", tune: { low: 2, high: 4, at: 20 } }
+};
+RACERS.forEach((racer) => { racer.active = ACTIVES[racer.id]; });
+
 const app = document.getElementById("app");
 const rulesDialog = document.getElementById("rulesDialog");
 const charactersDialog = document.getElementById("charactersDialog");
@@ -151,6 +183,10 @@ class AudioDirector {
     [440, 587.33, 783.99].forEach((frequency, index) => this.tone(frequency, 0.22, { delay: index * 0.07, type: "triangle", volume: 0.055 }));
   }
 
+  playSkill() {
+    [392, 523.25, 659.25, 1046.5].forEach((frequency, index) => this.tone(frequency, 0.2, { delay: index * 0.05, type: "square", volume: 0.04 }));
+  }
+
   playHazard(type) {
     if (type === "boost") {
       this.tone(330, 0.18, { type: "sine", volume: 0.055, toFrequency: 660 });
@@ -193,7 +229,9 @@ const state = {
   abilityFlash: null,
   effectFlash: null,
   busy: false,
-  raceOver: false
+  raceOver: false,
+  activeSkills: false,
+  lastMove: 0
 };
 
 // Analytics: sends a custom event to Umami when the server injected its tracker
@@ -511,9 +549,9 @@ function requestRaceRacer(racerId) {
   else chooseRaceRacer(racerId);
 }
 
-function requestTakeTurn() {
-  if (network.online && !network.isHost) network.sendAction("take_turn").catch(showNetworkError);
-  else takeTurn();
+function requestTakeTurn(skill = false) {
+  if (network.online && !network.isHost) network.sendAction("take_turn", skill ? { skill: true } : {}).catch(showNetworkError);
+  else takeTurn({ skill });
 }
 
 function showNetworkError(error) {
@@ -537,7 +575,7 @@ function handleRemoteAction(senderId, action, payload) {
   if (action === "take_turn") {
     const entrant = currentEntrant();
     const player = entrant && playerById(entrant.playerId);
-    if (state.phase === "race" && player?.controllerId === senderId) return takeTurn();
+    if (state.phase === "race" && player?.controllerId === senderId) return takeTurn({ skill: Boolean(payload.skill) });
   }
 }
 
@@ -596,6 +634,28 @@ function updateSoundButton() {
 
 let archiveRole = "All";
 
+let activeSkillsSetting = true;
+try {
+  activeSkillsSetting = localStorage.getItem("arcaneDashSkills") !== "off";
+} catch (error) {
+  // Storage is optional.
+}
+
+function skillsShown() {
+  return state.phase === "setup" || state.phase === "lobby" ? activeSkillsSetting : Boolean(state.activeSkills);
+}
+
+function skillIcon() {
+  return `<svg class="skill-icon" viewBox="0 0 6 8" shape-rendering="crispEdges" aria-hidden="true"><path fill="currentColor" d="M3 0h3v1h-3zM2 1h3v1h-3zM2 2h2v1h-2zM1 3h4v1h-4zM2 4h3v1h-3zM2 5h2v1h-2zM1 6h2v1h-2zM1 7h1v1h-1z"/></svg>`;
+}
+
+function skillToggleHtml(id) {
+  return `<label class="check-row skill-toggle" for="${id}">
+    <input id="${id}" type="checkbox" data-skills-toggle ${activeSkillsSetting ? "checked" : ""} />
+    <span><b>${skillIcon()}Active skills</b> <span class="test-tag">Test</span><br />Every runner also gets one skill to use once per race.</span>
+  </label>`;
+}
+
 function renderCharacterLibrary(filter = "") {
   const normalized = filter.trim().toLowerCase();
   const roles = ["All", ...new Set(RACERS.map((racer) => racer.role))];
@@ -606,7 +666,7 @@ function renderCharacterLibrary(filter = "") {
     renderCharacterLibrary(characterSearch.value);
   }));
   const matches = RACERS.filter((racer) => (archiveRole === "All" || racer.role === archiveRole)
-    && [racer.name, racer.tagline, racer.powerName, racer.power, racer.role].join(" ").toLowerCase().includes(normalized));
+    && [racer.name, racer.tagline, racer.powerName, racer.power, racer.role, racer.active?.name, racer.active?.text].join(" ").toLowerCase().includes(normalized));
   characterGrid.innerHTML = matches.length
     ? matches.map((racer) => runnerCardHtml(racer, { as: "article" })).join("")
     : `<p class="empty-note">No runners match that search.</p>`;
@@ -637,10 +697,11 @@ updateSoundButton();
 
 document.addEventListener("keydown", (event) => {
   if (state.phase !== "race" || event.repeat) return;
-  if (event.key !== " " && event.key.toLowerCase() !== "r") return;
+  const key = event.key.toLowerCase();
+  if (event.key !== " " && key !== "r" && key !== "s") return;
   const target = event.target;
   if (target && (target.closest?.("input, select, textarea, button, dialog[open]") || target.isContentEditable)) return;
-  const button = document.getElementById("rollButton");
+  const button = document.getElementById(key === "s" ? "skillButton" : "rollButton");
   if (button && !button.disabled) {
     event.preventDefault();
     button.click();
@@ -661,6 +722,7 @@ function runnerCardHtml(racer, options = {}) {
       <span class="runner-card-name">${racer.name}</span>
       <span class="runner-card-tag">${racer.tagline}</span>
       <span class="runner-card-power"><b>${racer.powerName}</b> ${racer.power}</span>
+      ${skillsShown() && racer.active ? `<span class="runner-card-power is-active-skill"><b>${skillIcon()}${racer.active.name}</b> ${racer.active.text}</span>` : ""}
     </${tag}>`;
 }
 
@@ -733,6 +795,7 @@ function renderSetup() {
             </div>
           </div>
           <ul id="playerConfigList" class="player-config-list"></ul>
+          ${skillToggleHtml("skillsToggleLocal")}
           <button id="startButton" class="btn btn-primary btn-block" type="button">Start the draft</button>
         </div>
 
@@ -749,6 +812,7 @@ function renderSetup() {
             <input id="fillBots" type="checkbox" />
             <span>Fill empty seats with bots when you start</span>
           </label>
+          ${skillToggleHtml("skillsToggleHost")}
           <button id="createLobbyButton" class="btn btn-primary btn-block" type="button">Create lobby</button>
           <p class="fine-print">Your browser runs the match, so keep this tab open until the final race.</p>
         </div>
@@ -781,6 +845,15 @@ function renderSetup() {
     });
   });
   document.getElementById("browseRunnersButton").addEventListener("click", openCharacters);
+  document.querySelectorAll("[data-skills-toggle]").forEach((input) => input.addEventListener("change", () => {
+    activeSkillsSetting = input.checked;
+    document.querySelectorAll("[data-skills-toggle]").forEach((other) => { other.checked = activeSkillsSetting; });
+    try {
+      localStorage.setItem("arcaneDashSkills", activeSkillsSetting ? "on" : "off");
+    } catch (error) {
+      // Storage is optional.
+    }
+  }));
   document.querySelectorAll("[data-runner]").forEach((button) => button.addEventListener("click", () => {
     openCharacters();
     characterSearch.value = racerById(button.dataset.runner).name;
@@ -965,7 +1038,8 @@ async function startHostedGame() {
     }
     state.deck = shuffle(RACERS);
     state.draftWave = 1;
-    track("game-start", teamMix());
+    state.activeSkills = activeSkillsSetting;
+    track("game-start", { ...teamMix(), skills: state.activeSkills });
     beginDraftWave();
   } catch (error) {
     network.notice = error.message;
@@ -988,7 +1062,8 @@ function startGame() {
   }));
   state.deck = shuffle(RACERS);
   state.draftWave = 1;
-  track("game-start", teamMix());
+  state.activeSkills = activeSkillsSetting;
+  track("game-start", { ...teamMix(), skills: state.activeSkills });
   beginDraftWave();
 }
 
@@ -1104,6 +1179,7 @@ function beginRaceSelection() {
   state.log = [];
   state.lastRoll = null;
   state.previousNaturalRoll = null;
+  state.lastMove = 0;
   state.diceSides = 6;
   state.diceRolling = false;
   state.diceCaption = "Ready";
@@ -1182,7 +1258,10 @@ function chooseRaceRacer(racerId) {
     usedReroll: false,
     crossedTwenty: false,
     napping: false,
-    charge: 0
+    charge: 0,
+    skillUsed: false,
+    wall: false,
+    frozen: 0
   });
   state.selectionIndex += 1;
 
@@ -1339,7 +1418,7 @@ function paintRace() {
       token = document.createElement("button");
       token.type = "button";
       token.className = "token";
-      token.innerHTML = `<span class="token-body">${portraitImg(racer.id)}</span><span class="token-badge" aria-hidden="true"></span><span class="token-tip" role="tooltip"><span class="tip-team"></span><strong>${racer.name}</strong><span class="tip-power"><b>${racer.powerName}</b> ${racer.power}</span><span class="tip-pos"></span></span>`;
+      token.innerHTML = `<span class="token-body">${portraitImg(racer.id)}</span><span class="token-badge" aria-hidden="true"></span><span class="token-tip" role="tooltip"><span class="tip-team"></span><strong>${racer.name}</strong><span class="tip-power"><b>${racer.powerName}</b> ${racer.power}</span>${state.activeSkills ? `<span class="tip-power is-active-skill"><b>${skillIcon()}${racer.active.name}</b> ${racer.active.text}</span>` : ""}<span class="tip-pos"></span></span>`;
       token.style.setProperty("--team", player.color);
       layer.appendChild(token);
       view.tokens.set(entrant.playerId, token);
@@ -1357,6 +1436,8 @@ function paintRace() {
     token.classList.toggle("tip-left", x > mapWidth - 170);
     token.classList.toggle("tip-right", x < 170);
     token.querySelector(".token-badge").textContent = entrant.finished ? String(entrant.finishPlace) : entrant.tripped ? "!" : entrant.napping ? "z" : "";
+    token.classList.toggle("has-wall", Boolean(entrant.wall && entrant.pos > 0));
+    token.classList.toggle("is-frozen", Boolean(entrant.frozen));
     token.querySelector(".tip-team").textContent = player.name;
     token.querySelector(".tip-team").style.color = player.color;
     token.querySelector(".tip-pos").textContent = entrantStatus(entrant);
@@ -1375,7 +1456,7 @@ function paintRace() {
   let calloutHtml = "";
   if (state.abilityFlash) {
     const player = playerById(state.abilityFlash.playerId);
-    calloutHtml = `<div class="callout" style="--team:${player.color}">${portraitImg(state.abilityFlash.racerId)}<div><span class="callout-who">${teamName(player)} · ${racerById(state.abilityFlash.racerId).name}</span><strong>${escapeHtml(state.abilityFlash.name)}</strong><span class="callout-detail">${escapeHtml(state.abilityFlash.detail)}</span></div></div>`;
+    calloutHtml = `<div class="callout ${state.abilityFlash.kind === "skill" ? "is-skill" : ""}" style="--team:${player.color}">${portraitImg(state.abilityFlash.racerId)}<div><span class="callout-who">${teamName(player)} · ${racerById(state.abilityFlash.racerId).name}</span><strong>${state.abilityFlash.kind === "skill" ? skillIcon() : ""}${escapeHtml(state.abilityFlash.name)}</strong><span class="callout-detail">${escapeHtml(state.abilityFlash.detail)}</span></div></div>`;
   } else if (state.effectFlash) {
     calloutHtml = `<div class="callout is-effect is-${state.effectFlash.type}"><i class="legend-dot is-${state.effectFlash.type}"></i><strong>${escapeHtml(state.effectFlash.text)}</strong></div>`;
   }
@@ -1393,9 +1474,11 @@ function paintRace() {
     view.turnHtml = turnHtml;
     const roll = document.getElementById("rollButton");
     if (roll) {
-      roll.addEventListener("click", requestTakeTurn);
+      roll.addEventListener("click", () => requestTakeTurn(false));
       if (hadFocus && !roll.disabled) roll.focus({ preventScroll: true });
     }
+    const skillButton = document.getElementById("skillButton");
+    if (skillButton) skillButton.addEventListener("click", () => requestTakeTurn(true));
   }
 
   // Standings
@@ -1407,7 +1490,7 @@ function paintRace() {
     return `<li class="standing ${entrant.playerId === activeId ? "is-active" : ""}" style="--team:${player.color};--progress:${progress.toFixed(1)}%">
       <span class="standing-rank">${index + 1}</span>
       ${portraitImg(racer.id, "", "")}
-      <span class="standing-copy"><strong>${teamName(player)}</strong><span>${racer.name}${entrant.tripped ? " · tripped" : entrant.napping ? " · napping" : ""}</span></span>
+      <span class="standing-copy"><strong>${teamName(player)}${state.activeSkills && !entrant.finished ? `<span class="skill-pip ${entrant.skillUsed ? "is-spent" : ""}" title="${racer.active.name}: ${entrant.skillUsed ? "used" : "ready"}">${skillIcon()}</span>` : ""}</strong><span>${racer.name}${entrant.tripped ? " · tripped" : entrant.napping ? " · napping" : ""}${entrant.frozen ? " · frozen" : ""}${entrant.wall && entrant.pos > 0 ? " · wall up" : ""}</span></span>
       <span class="standing-pos">${entrant.finished ? (entrant.finishPlace === 1 ? "1st" : entrant.finishPlace === 2 ? "2nd" : "Done") : entrant.pos}</span>
       <span class="standing-bar" aria-hidden="true"></span>
     </li>`;
@@ -1433,6 +1516,11 @@ function dieFaceHtml(value) {
 
 function setDieFace(element, value) {
   if (!element) return;
+  if (value > 8) {
+    element.className = "die-text";
+    element.textContent = String(value);
+    return;
+  }
   element.className = "pips";
   element.dataset.face = String(value);
   if (element.children.length !== 9) element.innerHTML = "<i></i>".repeat(9);
@@ -1450,6 +1538,14 @@ function turnCardHtml(entrant) {
   const shown = value === "" ? "?" : value;
   const pips = state.diceSides === 8 ? "d8" : "d6";
   const waiting = player.isBot ? `${teamName(player)} (bot) is rolling` : `Waiting for ${teamName(player)}`;
+  const skill = state.activeSkills ? racer.active : null;
+  const status = skill ? skillStatus(entrant) : null;
+  const skillButton = skill && controllable
+    ? `<button id="skillButton" class="btn btn-skill" type="button" ${state.busy || !status.ready ? "disabled" : ""} title="${escapeHtml(status.ready ? `${skill.name}: ${skill.text}` : status.reason)}">
+        <span class="btn-skill-name">${skillIcon()}${skill.name}<kbd class="key-hint">S</kbd></span>
+        <small>${escapeHtml(status.ready ? (entrant.napping ? "Wake up and roll" : "Use, then roll") : status.reason)}</small>
+      </button>`
+    : skill ? `<p class="skill-state ${status.ready ? "" : "is-spent"}">${skillIcon()}${skill.name}: ${escapeHtml(status.ready ? "ready" : status.reason.toLowerCase())}</p>` : "";
   return `
     <div class="panel turn-panel" style="--team:${player.color};--tint:${racerTint(racer.id)}">
       <div class="turn-who">
@@ -1458,6 +1554,7 @@ function turnCardHtml(entrant) {
           <span class="turn-team"><span class="team-swatch"></span>${teamName(player)}</span>
           <strong class="turn-runner">${racer.name}</strong>
           <span class="turn-power"><b>${racer.powerName}</b> ${racer.power}</span>
+          ${skill ? `<span class="turn-power is-active-skill"><b>${skillIcon()}${skill.name}</b> ${skill.text}</span>` : ""}
         </div>
       </div>
       <div class="turn-action">
@@ -1466,8 +1563,8 @@ function turnCardHtml(entrant) {
           <span class="die-caption">${escapeHtml(state.diceCaption)}</span>
         </div>
         ${controllable
-          ? `<button id="rollButton" class="btn btn-primary btn-roll" type="button" ${state.busy ? "disabled" : ""}>${label}<kbd class="key-hint">R</kbd></button>`
-          : `<p class="turn-wait">${waiting}</p>`}
+          ? `<div class="turn-buttons"><button id="rollButton" class="btn btn-primary btn-roll" type="button" ${state.busy ? "disabled" : ""}>${label}<kbd class="key-hint">R</kbd></button>${skillButton}</div>`
+          : `<div class="turn-buttons"><p class="turn-wait">${waiting}</p>${skillButton}</div>`}
       </div>
     </div>`;
 }
@@ -1617,7 +1714,7 @@ function maybeRunBotTurn() {
   if (!entrant) return;
   const player = playerById(entrant.playerId);
   if (!player.isBot) return;
-  window.setTimeout(takeTurn, 650);
+  window.setTimeout(autoTurn, 650);
 }
 
 async function animateDice(finalValue, sides = 6, caption = "Rolling") {
@@ -1642,13 +1739,13 @@ async function animateDice(finalValue, sides = 6, caption = "Rolling") {
   await wait(260);
 }
 
-async function showAbility(entrant, name, detail) {
+async function showAbility(entrant, name, detail, kind = "power") {
   if (!entrant) return;
-  const racer = racerById(entrant.racerId);
-  state.abilityFlash = { playerId: entrant.playerId, racerId: entrant.racerId, name, detail };
-  audio.playAbility();
+  state.abilityFlash = { playerId: entrant.playerId, racerId: entrant.racerId, name, detail, kind };
+  if (kind === "skill") audio.playSkill();
+  else audio.playAbility();
   renderRace();
-  await wait(760);
+  await wait(kind === "skill" ? 1000 : 760);
   state.abilityFlash = null;
   renderRace();
 }
@@ -1662,7 +1759,155 @@ async function showEffect(type, text, sound = type) {
   renderRace();
 }
 
-async function takeTurn() {
+// ---------------------------------------------------------------------------
+// Active skills (test build)
+// ---------------------------------------------------------------------------
+
+function rivalsOf(entrant) {
+  return state.entrants.filter((other) => other !== entrant && !other.finished);
+}
+
+function nearestRivalAhead(entrant, range, filter = () => true) {
+  return rivalsOf(entrant)
+    .filter((other) => other.pos > entrant.pos && other.pos - entrant.pos <= range && filter(other))
+    .sort((a, b) => a.pos - b.pos)[0] || null;
+}
+
+function leadingRival(entrant) {
+  return rivalsOf(entrant).filter((other) => other.pos > entrant.pos).sort((a, b) => b.pos - a.pos)[0] || null;
+}
+
+function whirlpoolTargets(entrant, range) {
+  return rivalsOf(entrant).filter((other) => other.pos > entrant.pos && other.pos - entrant.pos <= range);
+}
+
+// Whether this runner's skill can be used on its next turn, and why not.
+function skillStatus(entrant) {
+  const racer = entrant && racerById(entrant.racerId);
+  const skill = racer?.active;
+  if (!state.activeSkills || !skill) return { ready: false, reason: "" };
+  if (entrant.skillUsed) return { ready: false, reason: "Used this race" };
+  if (entrant.finished) return { ready: false, reason: "Finished" };
+  if (entrant.tripped) return { ready: false, reason: "Can't use while tripped" };
+  const tune = skill.tune;
+  const no = (reason) => ({ ready: false, reason });
+  switch (racer.id) {
+    case "bubble-witch":
+    case "anchor-knight":
+    case "portal-pup":
+      if (!nearestRivalAhead(entrant, tune.range)) return no(`Needs a rival within ${tune.range} ahead`);
+      break;
+    case "prism-slime":
+      if (!nearestRivalAhead(entrant, tune.range, (other) => other.racerId !== "anchor-knight")) return no(`Needs a rival within ${tune.range} ahead`);
+      break;
+    case "storm-crow":
+      if (!leadingRival(entrant)) return no("You're already leading");
+      break;
+    case "moss-golem":
+      if (entrant.pos === 0) return no("Not on the start line");
+      break;
+    case "wisp-twins":
+      if ((entrant.turns + 1) % 2 === 1) return no("Ready on even turns");
+      break;
+    case "meteor-mouse": {
+      const gap = getLeaderPosition() - entrant.pos;
+      if (gap >= racer.tune.gap) return no("Slingshot already doubles this roll");
+      if (gap < tune.gap) return no(`Needs to be ${tune.gap}+ behind the leader`);
+      break;
+    }
+    case "river-otter":
+      if (!whirlpoolTargets(entrant, tune.range).length) return no(`Needs a rival within ${tune.range} ahead`);
+      break;
+    case "quake-beetle":
+      if (!rivalsOf(entrant).some((other) => other.pos > 0)) return no("No rivals on the track yet");
+      break;
+    default:
+      break;
+  }
+  return { ready: true, reason: "Ready" };
+}
+
+// Bot (and simulator) policy: hold the skill for a good moment, but never finish the
+// race with it unused.
+function botWantsSkill(entrant) {
+  if (!entrant || !skillStatus(entrant).ready) return false;
+  const racer = racerById(entrant.racerId);
+  const tune = racer.active.tune;
+  const rivals = rivalsOf(entrant);
+  const late = TRACK_LENGTH - entrant.pos <= 12 || rivals.some((other) => TRACK_LENGTH - other.pos <= 9);
+  const ahead = rivals.filter((other) => other.pos > entrant.pos);
+  const behind = rivals.filter((other) => other.pos < entrant.pos);
+  const gapTo = (target) => (target ? target.pos - entrant.pos : 0);
+  switch (racer.id) {
+    case "nap-dragon": return entrant.napping || late;
+    case "pepper-pixie": return entrant.pos >= tune.at || late;
+    case "gear-goblin": return entrant.charge >= 2 || late;
+    case "spark-snail": return entrant.turns + 1 >= tune.max || late;
+    case "lantern-sprite": return ahead.length >= 2 || (late && ahead.length >= 1);
+    case "crown-crab": return behind.length >= 2 || (late && behind.length >= 1);
+    case "wisp-twins": return true;
+    case "echo-fox": return state.lastMove >= 6 || (late && state.lastMove >= 4);
+    case "portal-pup": return gapTo(nearestRivalAhead(entrant, tune.range)) >= 5 || late;
+    case "anchor-knight": return gapTo(nearestRivalAhead(entrant, tune.range)) >= 3 || late;
+    case "prism-slime": return gapTo(nearestRivalAhead(entrant, tune.range, (other) => other.racerId !== "anchor-knight")) >= 3 || late;
+    case "bubble-witch": return nearestRivalAhead(entrant, tune.range) === leadingRival(entrant) || late;
+    case "storm-crow": return leadingRival(entrant).pos >= 15 || late;
+    case "quake-beetle": return rivals.filter((other) => other.pos > 0).length >= 2 || late;
+    case "frost-yak": return ahead.length >= 2 || late;
+    case "river-otter": {
+      const net = whirlpoolTargets(entrant, tune.range).reduce((sum, other) => sum + (other.pos - entrant.pos), 0);
+      return net >= 3 || (late && net >= 1);
+    }
+    case "moss-golem": return (!ahead.length && behind.some((other) => entrant.pos - other.pos <= 6)) || late;
+    case "shadow-cat": {
+      const close = ahead.filter((other) => other.pos - entrant.pos <= 6).length;
+      return close >= 2 || (late && close >= 1);
+    }
+    default: return late;
+  }
+}
+
+function autoTurn() {
+  const entrant = currentEntrant();
+  return takeTurn({ skill: Boolean(state.activeSkills && entrant && botWantsSkill(entrant)) });
+}
+
+// Skills that act on rivals (or set something up) before this turn's roll.
+async function resolveSkillBeforeRoll(entrant, racer, tune) {
+  const name = racer.active.name;
+  if (racer.id === "bubble-witch") {
+    const target = nearestRivalAhead(entrant, tune.range);
+    target.tripped = true;
+    addLog(`<strong>${name}</strong>: ${racerById(target.racerId).name} will lose their next move.`);
+    renderRace();
+    await showEffect("trip", `${racerById(target.racerId).name} is trapped in a bubble`, "trip");
+  } else if (racer.id === "anchor-knight") {
+    const target = nearestRivalAhead(entrant, tune.range);
+    await moveEntrantAnimated(target, entrant.pos - target.pos, name);
+  } else if (racer.id === "prism-slime") {
+    const target = nearestRivalAhead(entrant, tune.range, (other) => other.racerId !== "anchor-knight");
+    const [mine, theirs] = [entrant.pos, target.pos];
+    entrant.pos = theirs;
+    target.pos = mine;
+    audio.playStep(0, 1);
+    renderRace();
+    await wait(STEP_DELAY * 2);
+  } else if (racer.id === "storm-crow") {
+    await moveEntrantAnimated(leadingRival(entrant), -tune.push, name);
+  } else if (racer.id === "quake-beetle") {
+    for (const target of rivalsOf(entrant).filter((other) => other.pos > 0)) await moveEntrantAnimated(target, -tune.push, name);
+  } else if (racer.id === "frost-yak") {
+    rivalsOf(entrant).forEach((other) => { other.frozen = tune.chill; });
+    renderRace();
+  } else if (racer.id === "river-otter") {
+    for (const target of whirlpoolTargets(entrant, tune.range)) await moveEntrantAnimated(target, entrant.pos - target.pos, name);
+  } else if (racer.id === "moss-golem") {
+    entrant.wall = true;
+    renderRace();
+  }
+}
+
+async function takeTurn(options = {}) {
   if (state.busy || state.raceOver) return;
   const entrant = currentEntrant();
   if (!entrant || entrant.finished) {
@@ -1671,104 +1916,181 @@ async function takeTurn() {
   }
 
   await audio.ensure();
+  const skill = options.skill && skillStatus(entrant).ready ? racerById(entrant.racerId).active : null;
   state.busy = true;
   entrant.turns += 1;
   const player = playerById(entrant.playerId);
   const racer = racerById(entrant.racerId);
   const tune = racer.tune || {};
+  const skillTune = skill ? skill.tune : {};
+  const frozen = entrant.frozen || 0;
+  entrant.frozen = 0;
+  entrant.wall = false;
 
   if (entrant.tripped) {
     entrant.tripped = false;
     state.lastRoll = "–";
     state.diceCaption = "Standing up";
+    state.lastMove = 0;
     await showEffect("trip", `${racer.name} stands up`, "trip");
     addLog(`<strong>${escapeHtml(player.name)}</strong>'s ${racer.name} stands up and misses the move.`);
     await finishTurn();
     return;
   }
 
-  if (entrant.napping) {
+  if (entrant.napping && !skill) {
     entrant.napping = false;
     state.lastRoll = "z";
     state.diceCaption = "Napping";
+    state.lastMove = 0;
     await showAbility(entrant, racer.powerName, "Sleeping off the big dream. No move this turn.");
     addLog(`<strong>${escapeHtml(player.name)}</strong>'s ${racer.name} naps through the turn.`);
     await finishTurn();
     return;
   }
+  entrant.napping = false;
+
+  const notes = [];
+  const id = racer.id;
+  if (skill) {
+    entrant.skillUsed = true;
+    notes.push(skill.name);
+    await showAbility(entrant, skill.name, skill.text, "skill");
+    await resolveSkillBeforeRoll(entrant, racer, skillTune);
+  }
 
   let naturalRoll = null;
   let movement = 0;
-  const notes = [];
   const leader = getLeaderPosition();
 
-  if (racer.id === "moss-golem") {
+  if (skill && id === "echo-fox") {
+    movement = Math.max(0, state.lastMove || 0) + skillTune.bonus;
+    await animateDice(movement, 6, "Copycat");
+  } else if (skill && id === "lucky-turnip") {
+    movement = skillTune.value;
+    await animateDice(movement, 6, "Lucky seven");
+  } else if (skill && id === "portal-pup") {
+    const target = nearestRivalAhead(entrant, skillTune.range);
+    await animateDice(target.pos - entrant.pos, 6, "Warp");
+    setEntrantPosition(entrant, target.pos);
+    audio.playStep(0, 1);
+    notes.push(`warped ${state.lastRoll}`);
+  } else if (id === "moss-golem") {
     const lastPlace = leader - entrant.pos >= tune.gap;
     movement = lastPlace ? tune.last : tune.fixed;
     await animateDice(movement, 6, lastPlace ? "Pushing from behind" : "Measured march");
-  } else if (racer.id === "nap-dragon") {
+  } else if (id === "nap-dragon") {
     naturalRoll = randomInt(1, 8);
+    if (skill) {
+      const second = randomInt(1, 8);
+      notes.push(`kept the higher of ${naturalRoll} and ${second}`);
+      naturalRoll = Math.max(naturalRoll, second);
+    }
     movement = naturalRoll;
-    await animateDice(naturalRoll, 8, "Dream die");
+    await animateDice(naturalRoll, 8, skill ? "Best of two" : "Dream die");
+  } else if (skill && id === "comet-kid") {
+    const first = randomInt(1, 6);
+    const second = randomInt(1, 6);
+    naturalRoll = Math.max(first, second);
+    movement = naturalRoll;
+    notes.push(`kept the higher of ${first} and ${second}`);
+    await animateDice(naturalRoll, 6, "Best of two");
+  } else if (skill && id === "moon-moth") {
+    naturalRoll = randomInt(1, skillTune.sides);
+    movement = naturalRoll;
+    await animateDice(naturalRoll, skillTune.sides, "Full moon");
+  } else if (skill && id === "mirror-owl") {
+    const rolls = Array.from({ length: skillTune.dice }, () => randomInt(1, 6));
+    naturalRoll = Math.max(...rolls);
+    movement = naturalRoll + skillTune.bonus;
+    notes.push(`kept the highest of ${rolls.join(", ")}, +${skillTune.bonus}`);
+    await animateDice(naturalRoll, 6, "Best of three");
   } else {
     naturalRoll = randomInt(1, 6);
     movement = naturalRoll;
     await animateDice(naturalRoll, 6, "Rolling");
   }
 
-  if (racer.id === "clockwork-hare" && naturalRoll !== null && naturalRoll <= tune.below) {
+  if (id === "clockwork-hare" && naturalRoll !== null && naturalRoll <= tune.below) {
     await showAbility(entrant, racer.powerName, `A ${naturalRoll} gets rerolled.`);
     naturalRoll = randomInt(1, 6);
-    movement = naturalRoll;
     movement = naturalRoll + tune.bonus;
     notes.push(`rerolled to ${naturalRoll}, +${tune.bonus}`);
     await animateDice(naturalRoll, 6, "Reroll");
   }
+  if (skill && id === "clockwork-hare") {
+    const extra = randomInt(1, skillTune.sides);
+    movement += extra;
+    notes.push(`extra d${skillTune.sides} ${extra}`);
+    await animateDice(extra, skillTune.sides, `Extra die: ${movement} total`);
+  }
 
-  const bonus = async (amount, detail, note) => {
+  const bonus = async (amount, detail, note, name = racer.powerName, kind = "power") => {
     movement += amount;
-    await showAbility(entrant, racer.powerName, detail);
+    await showAbility(entrant, name, detail, kind);
     notes.push(note || `+${amount}`);
   };
+  const skillBonus = (amount, detail) => bonus(amount, detail, `+${amount}`, skill.name, "skill");
 
-  if (racer.id === "lucky-turnip" && naturalRoll === 2) {
+  if (id === "lucky-turnip" && naturalRoll === 2) {
     movement = tune.value;
     await showAbility(entrant, racer.powerName, `The lucky 2 counts as ${tune.value}.`);
     notes.push(`2 became ${tune.value}`);
   }
-  if (racer.id === "comet-kid" && naturalRoll === 6) await bonus(tune.bonus, `A perfect 6 adds ${tune.bonus}.`);
-  if (racer.id === "moon-moth" && naturalRoll % 2 === 1) await bonus(tune.bonus, "An odd roll adds 1.");
-  if (racer.id === "gear-goblin" && entrant.charge > 0) await bonus(entrant.charge, `Tuned gears add ${entrant.charge}.`);
-  if (racer.id === "lantern-sprite" && trailsAllBy(entrant, tune.gap)) {
-    const ahead = state.entrants.filter((other) => other !== entrant && !other.finished).length * tune.bonus;
+  if (id === "comet-kid" && (naturalRoll === 6 || (skill && naturalRoll >= skillTune.flare))) await bonus(tune.bonus, `A ${naturalRoll === 6 ? "perfect 6" : "hot 5"} adds ${tune.bonus}.`);
+  if (id === "moon-moth" && naturalRoll % 2 === 1) await bonus(tune.bonus, "An odd roll adds 1.");
+  if (id === "gear-goblin" && entrant.charge > 0) await bonus(entrant.charge, `Tuned gears add ${entrant.charge}.`);
+  if (skill && id === "gear-goblin") await skillBonus(skillTune.bonus + entrant.charge, `Overclocked: +${skillTune.bonus + entrant.charge}.`);
+  if (id === "lantern-sprite" && trailsAllBy(entrant, tune.gap)) {
+    const ahead = rivalsOf(entrant).length * tune.bonus;
     await bonus(ahead, `Trailing the pack: the lantern flares for ${ahead}.`);
   }
-  if (racer.id === "crown-crab" && leader - entrant.pos <= tune.range) await bonus(tune.bonus, `Within ${tune.range} of the lead: royal pace adds ${tune.bonus}.`);
-  if (racer.id === "spark-snail" && entrant.turns % tune.every === 0) await bonus(tune.bonus, `Every third turn: stored energy releases ${tune.bonus}.`);
-  if (racer.id === "wisp-twins") {
+  if (skill && id === "lantern-sprite") {
+    const ahead = rivalsOf(entrant).filter((other) => other.pos > entrant.pos).length;
+    if (ahead) await skillBonus(ahead * skillTune.per, `${ahead} runner${ahead === 1 ? "" : "s"} ahead: +${ahead * skillTune.per}.`);
+  }
+  if (id === "crown-crab" && leader - entrant.pos <= tune.range) await bonus(tune.bonus, `Within ${tune.range} of the lead: royal pace adds ${tune.bonus}.`);
+  if (skill && id === "crown-crab") {
+    const behind = rivalsOf(entrant).filter((other) => other.pos < entrant.pos).length;
+    if (behind) await skillBonus(behind * skillTune.per, `${behind} rival${behind === 1 ? "" : "s"} behind: +${behind * skillTune.per}.`);
+  }
+  if (id === "spark-snail" && entrant.turns % tune.every === 0) await bonus(tune.bonus, `Every third turn: stored energy releases ${tune.bonus}.`);
+  if (skill && id === "spark-snail") {
+    const charge = Math.min(skillTune.max, entrant.turns);
+    await skillBonus(charge, `Turn ${entrant.turns}: discharge for +${charge}.`);
+  }
+  if (id === "wisp-twins") {
     if (entrant.turns % 2 === 1) await bonus(tune.up, `The bright twin adds ${tune.up}.`);
+    else if (skill) {
+      await showAbility(entrant, skill.name, "The dim twin stays home. No loss this turn.", "skill");
+      notes.push("no loss");
+    }
     else {
       movement = Math.max(1, movement - tune.down);
       await showAbility(entrant, racer.powerName, `The dim twin takes ${tune.down} away.`);
       notes.push(`-${tune.down}`);
     }
   }
-  if (racer.id === "river-otter") {
+  if (id === "river-otter") {
     const companions = state.entrants.filter((other) => other !== entrant && !other.finished && other.pos - entrant.pos >= 0 && other.pos - entrant.pos <= tune.range).length;
     if (companions) await bonus(Math.min(tune.max, companions), `${companions} rival${companions === 1 ? "" : "s"} close by add ${Math.min(tune.max, companions)}.`);
   }
-  if (racer.id === "mirror-owl" && naturalRoll !== null && state.previousNaturalRoll > naturalRoll) {
+  if (id === "mirror-owl" && naturalRoll !== null && state.previousNaturalRoll > naturalRoll) {
     const gain = Math.min(tune.max, state.previousNaturalRoll - naturalRoll);
     await bonus(gain, `The last runner rolled ${state.previousNaturalRoll}. Reflection adds ${gain}.`);
   }
-  if (racer.id === "meteor-mouse" && leader - entrant.pos >= tune.gap) {
+  if (skill && id === "pepper-pixie") {
+    const heat = entrant.pos >= skillTune.at ? skillTune.high : skillTune.low;
+    await skillBonus(heat, `Hot sauce: +${heat}.`);
+  }
+  if (id === "meteor-mouse" && (skill || leader - entrant.pos >= tune.gap)) {
     const before = movement;
     movement *= 2;
-    await showAbility(entrant, racer.powerName, `Far behind: ${before} doubles to ${movement}.`);
+    await showAbility(entrant, skill ? skill.name : racer.powerName, skill ? `Early launch: ${before} doubles to ${movement}.` : `Far behind: ${before} doubles to ${movement}.`, skill ? "skill" : "power");
     notes.push("doubled");
   }
-  if (racer.id === "storm-crow" && naturalRoll !== null && naturalRoll <= tune.max) {
-    const target = Math.max(entrant.pos + naturalRoll, leader - tune.gap);
+  if (id === "storm-crow" && naturalRoll !== null && naturalRoll <= tune.max) {
+    const target = Math.max(entrant.pos + naturalRoll, getLeaderPosition() - tune.gap);
     movement = target - entrant.pos;
     await showAbility(entrant, racer.powerName, `Lightning carries the crow to space ${target}.`);
     notes.push(`jumped ${movement}`);
@@ -1781,31 +2103,47 @@ async function takeTurn() {
     await showAbility(yak, racerById("frost-yak").powerName, `${racer.name} is chilled and loses ${chill}.`);
     notes.push(`chilled -${chill}`);
   }
+  if (frozen && movement > 1) {
+    const loss = Math.min(movement - 1, frozen);
+    movement -= loss;
+    const freezer = state.entrants.find((other) => other.racerId === "frost-yak");
+    if (freezer) await showAbility(freezer, ACTIVES["frost-yak"].name, `${racer.name} is frozen and loses ${loss}.`, "skill");
+    notes.push(`frozen -${loss}`);
+  }
 
-  if (racer.id === "anchor-knight" && naturalRoll !== null && naturalRoll < tune.below && movement < tune.floor) {
+  if (id === "anchor-knight" && naturalRoll !== null && naturalRoll < tune.below && movement < tune.floor) {
     movement = tune.floor;
     await showAbility(entrant, racer.powerName, `A 1 becomes ${tune.floor}.`);
     notes.push(`raised to ${tune.floor}`);
   }
 
   const startPos = entrant.pos;
-  if (racer.id === "shadow-cat") await moveShadowCatAnimated(entrant, movement, tune.free);
+  if (id === "shadow-cat") await moveShadowCatAnimated(entrant, movement, tune.free);
   else await moveEntrantAnimated(entrant, movement, "main move");
 
-  if (racer.id === "gear-goblin" && naturalRoll !== null && naturalRoll <= tune.trigger && entrant.charge < tune.cap) {
+  if (skill && id === "shadow-cat") {
+    const passed = rivalsOf(entrant).filter((other) => other.pos > startPos && other.pos < entrant.pos).length;
+    if (passed && !entrant.finished) {
+      await showAbility(entrant, skill.name, `Passed ${passed} rival${passed === 1 ? "" : "s"}: pounce ${passed * skillTune.per} more.`, "skill");
+      await moveEntrantAnimated(entrant, passed * skillTune.per, skill.name);
+      notes.push(`pounced +${passed * skillTune.per}`);
+    }
+  }
+
+  if (id === "gear-goblin" && naturalRoll !== null && naturalRoll <= tune.trigger && entrant.charge < tune.cap) {
     entrant.charge += 1;
     await showAbility(entrant, racer.powerName, `Low roll. Gears tuned: +${entrant.charge} on later rolls.`);
   }
 
   let blinks = 0;
-  while (!entrant.finished && racer.id === "portal-pup" && blinks < 3 && hasOpponentAt(entrant.pos, entrant.playerId)) {
+  while (!entrant.finished && id === "portal-pup" && blinks < 3 && hasOpponentAt(entrant.pos, entrant.playerId)) {
     blinks += 1;
     await showAbility(entrant, racer.powerName, blinks > 1 ? `Another rival! Blink again for ${tune.bonus}.` : `Landed on a rival. Blink ${tune.bonus} more.`);
     await moveEntrantAnimated(entrant, tune.bonus, "Blink");
     notes.push(`blinked +${tune.bonus}`);
   }
 
-  if (!entrant.finished && racer.id === "prism-slime") {
+  if (!entrant.finished && id === "prism-slime") {
     const targets = state.entrants.filter((other) => other !== entrant && !other.finished && Math.abs(other.pos - entrant.pos) <= tune.range && other.pos > 0);
     if (targets.length) {
       await showAbility(entrant, racer.powerName, `${targets.length} rival${targets.length === 1 ? "" : "s"} slide back ${tune.push}.`);
@@ -1814,7 +2152,7 @@ async function takeTurn() {
     }
   }
 
-  if (racer.id === "quake-beetle" && naturalRoll >= tune.min) {
+  if (id === "quake-beetle" && naturalRoll >= tune.min) {
     const targets = state.entrants.filter((other) => other !== entrant && !other.finished && Math.abs(other.pos - entrant.pos) <= tune.range && other.pos > 0);
     if (targets.length) {
       await showAbility(entrant, racer.powerName, `${targets.length} nearby rival${targets.length === 1 ? "" : "s"} slide back ${tune.push}.`);
@@ -1823,14 +2161,14 @@ async function takeTurn() {
     }
   }
 
-  if (!entrant.finished && racer.id === "pepper-pixie" && !entrant.crossedTwenty && startPos < tune.at && entrant.pos >= tune.at) {
+  if (!entrant.finished && id === "pepper-pixie" && !entrant.crossedTwenty && startPos < tune.at && entrant.pos >= tune.at) {
     entrant.crossedTwenty = true;
     await showAbility(entrant, racer.powerName, `Crossing space ${tune.at} triggers a ${tune.bonus}-space surge.`);
     await moveEntrantAnimated(entrant, tune.bonus, "Spicy Finish");
     notes.push(`surged +${tune.bonus}`);
   }
 
-  if (racer.id === "nap-dragon" && naturalRoll >= tune.nap && !entrant.finished) {
+  if (id === "nap-dragon" && naturalRoll >= tune.nap && !entrant.finished) {
     entrant.napping = true;
     notes.push("will nap");
   }
@@ -1841,6 +2179,7 @@ async function takeTurn() {
   state.previousNaturalRoll = naturalRoll;
 
   const netMovement = entrant.pos - startPos;
+  state.lastMove = Math.max(0, netMovement);
   addLog(`<strong>${escapeHtml(player.name)}</strong>'s ${racer.name} ${netMovement >= 0 ? `moved ${netMovement}` : `slipped back ${-netMovement}`}${notes.length ? ` (${notes.join(", ")})` : ""}.`);
   renderRace();
 
@@ -1871,6 +2210,7 @@ async function moveShadowCatAnimated(entrant, amount, freeSpaces = 1) {
   let used = false;
   while (remaining > 0 && entrant.pos < TRACK_LENGTH) {
     const nextPosition = entrant.pos + 1;
+    if (await stoppedByWall(entrant)) break;
     const occupied = hasOpponentAt(nextPosition, entrant.playerId);
     physicalStep += 1;
     if (occupied && free > 0 && remaining > 1) {
@@ -1894,6 +2234,14 @@ async function triggerBubbleBounce(mover) {
   }
 }
 
+// Moss Golem's Stone Wall: rivals can't step past the golem's space.
+async function stoppedByWall(entrant) {
+  const golem = state.entrants.find((other) => other !== entrant && other.wall && !other.finished && other.pos > 0 && other.pos === entrant.pos);
+  if (!golem) return false;
+  await showAbility(golem, ACTIVES["moss-golem"].name, `${racerById(entrant.racerId).name} is stopped at the wall.`, "skill");
+  return true;
+}
+
 async function moveEntrantAnimated(entrant, amount, reason) {
   if (entrant.finished || amount === 0) return;
   const racer = racerById(entrant.racerId);
@@ -1909,6 +2257,7 @@ async function moveEntrantAnimated(entrant, amount, reason) {
     if (entrant.finished) break;
     const nextPosition = Math.max(0, entrant.pos + direction);
     if (nextPosition === entrant.pos) break;
+    if (direction > 0 && await stoppedByWall(entrant)) break;
     await stepEntrantTo(entrant, nextPosition, index + 1, direction);
   }
 }

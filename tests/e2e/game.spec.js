@@ -94,6 +94,53 @@ test("human turn: draft, pick a runner, roll with the keyboard, token moves", as
   expect(errors).toEqual([]);
 });
 
+test("active skills: the skill button uses the skill once, and the setup toggle turns skills off", async ({ page, isMobile }) => {
+  const errors = watchErrors(page);
+  await page.clock.install();
+  await page.goto("/");
+  await page.click('[data-team-count="2"]');
+  await expect(page.locator("#skillsToggleLocal")).toBeChecked();
+  await page.click("#startButton");
+  await expect(page.locator(".runner-card .is-active-skill").first()).toBeVisible();
+  await draftAndSelect(page);
+  // Give the human a skill that is always ready, so the test doesn't depend on the draw.
+  await page.evaluate(() => { state.entrants.find((e) => e.playerId === "p0").racerId = "lucky-turnip"; });
+  for (let i = 0; i < 20; i += 1) {
+    if (await page.locator("#rollButton:not([disabled])").count()) break;
+    await page.clock.runFor(700);
+  }
+  await page.evaluate(() => renderRace());
+  const skill = page.locator("#skillButton");
+  await expect(skill).toBeEnabled();
+  await noHorizontalScroll(page);
+  const before = await page.evaluate(() => state.entrants.find((e) => e.playerId === "p0").pos);
+  if (isMobile) await skill.tap();
+  else await page.keyboard.press("s");
+  await page.clock.runFor(6000);
+  const after = await page.evaluate(() => state.entrants.find((e) => e.playerId === "p0"));
+  expect(after.skillUsed).toBe(true);
+  expect(after.pos - before).toBeGreaterThanOrEqual(7);
+  for (let i = 0; i < 20; i += 1) {
+    if (await page.locator("#rollButton:not([disabled])").count() || await page.evaluate(() => state.raceOver)) break;
+    await page.clock.runFor(700);
+  }
+  if (!(await page.evaluate(() => state.raceOver))) await expect(page.locator("#skillButton")).toBeDisabled();
+
+  await page.goto("/");
+  await page.click('[data-team-count="2"]');
+  await page.uncheck("#skillsToggleLocal");
+  await page.click("#startButton");
+  await expect(page.locator(".runner-card .is-active-skill")).toHaveCount(0);
+  await draftAndSelect(page);
+  await page.clock.runFor(1500);
+  await expect(page.locator("#skillButton")).toHaveCount(0);
+  expect(await page.evaluate(() => state.activeSkills)).toBe(false);
+  await page.goto("/");
+  await expect(page.locator("#skillsToggleLocal")).not.toBeChecked();
+  await page.check("#skillsToggleLocal");
+  expect(errors).toEqual([]);
+});
+
 test("runner list and rules open, filter and close", async ({ page }) => {
   await page.goto("/");
   await page.click("#charactersButton");

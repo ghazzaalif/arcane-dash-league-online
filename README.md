@@ -94,7 +94,7 @@ Custom events, sent once per game by the solo player or online host:
 
 | Event | Data | Answers |
 | --- | --- | --- |
-| `game-start` | `mode` (local/online), `teams`, `humans`, `bots` | How many games start, and in which setup |
+| `game-start` | `mode` (local/online), `teams`, `humans`, `bots`, `skills` (active skills on/off) | How many games start, and in which setup |
 | `draft-pick` | `runner`, `role`, `wave`, `mode` (human picks only) | Which runners players actually want |
 | `race-finish` | `race`, `track` (calm/chaos), `teams`, `first`, `second`, `winnerIsBot` | Which runners win real races |
 | `game-finish` | `mode`, `teams`, `humans`, `bots`, `winner` (human/bot/tie), `topScore` | Completion rate (vs `game-start`), human win rate |
@@ -138,7 +138,10 @@ The first `test:e2e` run needs a browser: `npx playwright install chromium`.
   scoring, track spaces and every runner power.
 - `tests/unit/assets.test.js` checks the board layout (compact, no overlapping tiles, fits on
   screen) and that every runner has a valid 16x16 sprite.
-- `tests/balance/` fails if any runner drifts outside 0.84x-1.16x of a fair share of points.
+- `tests/unit/skills.test.js` covers every active skill with scripted dice, the once-per-race
+  rule, the online guest path and the bot policy.
+- `tests/balance/` fails if any runner drifts outside 0.84x-1.16x of a fair share of points,
+  with active skills off and on.
 - `tests/server/` covers static files, security headers, the lobby API and the Umami
   tag/CSP wiring.
 - `tests/unit/analytics.test.js` plays a full game and checks which analytics events fire.
@@ -156,6 +159,44 @@ tens of thousands of races in 2, 3 and 4-team fields, measuring each runner's ex
 points (first place weighted double). Every runner now lands within about 5% of a fair
 share. If you change a power, re-run the numbers before shipping; the `tune` values on each
 runner in `RACERS` hold the numbers the rules read.
+
+## Active skills (test)
+
+A setup toggle ("Active skills", on by default in this build) gives every runner one skill on
+top of its power. A skill is used once per race at the start of your own turn (button or the
+S key); "then roll" skills resolve first and the turn carries on. The button says why when a
+skill can't be used yet (no rival in range, wrong turn, tripped). Bots and the simulator use
+skills through `botWantsSkill`: hold for a good moment, but don't finish a race with it unused.
+With skills off, the rules are exactly the classic ones.
+
+| Runner | Skill | Effect |
+| --- | --- | --- |
+| Clockwork Hare | Overwind | Roll an extra 4-sided die and add it. |
+| Moss Golem | Stone Wall | March, then rivals can't move past your space until your next turn. |
+| Comet Kid | Afterburner | Roll two dice and keep the higher. Flare Up fires on a 5 or 6. |
+| Bubble Witch | Bubble Trap | The nearest rival ahead (within 10) loses their next move. Then roll. |
+| Echo Fox | Copycat | Instead of rolling, move exactly what the last runner moved. |
+| Anchor Knight | Anchor Chain | Pull the nearest rival ahead (within 6) back to your space. Then roll. |
+| Lantern Sprite | Beacon | Gain 2 for each runner ahead of you. |
+| Prism Slime | Refraction | Swap places with the nearest rival ahead (within 4). Then roll. |
+| Storm Crow | Lightning Rod | The leader slides back 5. Then roll. |
+| Moon Moth | Full Moon | Roll a 12-sided die this turn. |
+| Gear Goblin | Overclock | Gain 2, plus your Tune-Up bonus again. |
+| Frost Yak | Deep Freeze | Every rival loses 3 on their next move. Then roll. |
+| Portal Pup | Portal | Instead of rolling, warp onto the nearest rival ahead (within 5). Blink still fires. |
+| Quake Beetle | Earthquake | Every rival on the track slides back 3. Then roll. |
+| Lucky Turnip | Lucky Seven | Instead of rolling, move exactly 7. |
+| Shadow Cat | Pounce | Gain 3 for every rival you pass this turn. |
+| Crown Crab | Royal Decree | Gain 2 for each rival behind you. |
+| Nap Dragon | Wide Awake | Roll the d8 twice and keep the higher. Works while napping (an 8 still naps). |
+| Spark Snail | Discharge | Gain 1 for every turn you've taken this race (max 3). |
+| Wisp Twins | Twin Swap | On an even turn, the dim twin stays home: you lose nothing. |
+| River Otter | Whirlpool | Pull every rival within 4 ahead back onto your space. Then roll. |
+| Meteor Mouse | Early Launch | Double this roll if you're 5+ behind the leader. |
+| Mirror Owl | Owl's Eye | Roll three dice and keep the highest, plus 1. |
+| Pepper Pixie | Hot Sauce | Gain 2, or 4 once you're on space 20 or later. |
+
+With skills on, the seeded simulator puts every runner between 0.92x and 1.06x of a fair share.
 
 ## Tracks
 
