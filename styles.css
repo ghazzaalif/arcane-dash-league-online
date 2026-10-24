@@ -919,3 +919,49 @@ button.runner-card:hover:not(:disabled) .runner-card-power.is-active-skill b { c
   .turn-buttons .btn-skill { min-height: 58px; padding: 4px 6px; }
   .btn-skill small { font-size: 0.7rem; line-height: 1.2; }
 }
+
+/* Rules switch on the setup card: Classic vs Active skills */
+.rules-switch { grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); }
+.rules-switch .segment { display: inline-flex; align-items: center; justify-content: center; gap: 2px; padding: 4px 8px; font-size: 1.2rem; text-transform: uppercase; }
+.rules-switch .segment.is-skill.is-on { color: var(--ink); border-image-source: var(--frame-arcane); }
+.rules-switch .segment.is-skill:not(.is-on) { color: var(--arcane); }
+.rules-field .field-hint { margin: 0; color: var(--muted); font-size: 0.9rem; }
+.rules-field.is-skills .field-hint { color: #d9c6ff; }
+.rules-field .field-label { display: flex; align-items: center; gap: 8px; }
+.skills-on-tag { display: inline-flex; align-items: center; color: var(--arcane); }
+
+/* Roll-off for first pick */
+.rolloff-panel { display: grid; gap: 18px; max-width: 640px; padding: 14px; }
+.rolloff-list { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.rolloff-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+  padding: 4px 10px;
+  border: 8px solid transparent;
+  border-image: var(--frame-raised) 2 fill / 8px / 0 stretch;
+  transition: opacity 150ms var(--step);
+}
+.rolloff-row.is-winner { border-image-source: var(--frame-gold); color: var(--ink); }
+.rolloff-row.is-winner .bot-tag { color: var(--ink); }
+.rolloff-row.is-out { opacity: 0.45; }
+.rolloff-name { min-width: 0; font-family: var(--display); font-weight: 700; font-size: 1.35rem; overflow-wrap: anywhere; }
+.rolloff-dice { display: flex; gap: 8px; }
+.die.is-small { width: 50px; height: 50px; border-width: 6px; font-size: 1.5rem; }
+.die.is-small .pips { grid-template-columns: repeat(3, 7px); grid-template-rows: repeat(3, 7px); gap: 2px; }
+.die.is-small .pips i { width: 7px; height: 7px; }
+.rolloff-actions { display: grid; justify-items: start; }
+.rolloff-actions .btn-roll { min-width: 240px; }
+.rolloff-status { font-family: var(--display); font-weight: 700; font-size: 1.6rem; text-transform: uppercase; color: var(--muted); }
+.rolloff-status.is-winner { display: inline-flex; align-items: center; gap: 10px; color: var(--gold); }
+.die.is-small.is-live { animation: die-tumble 480ms steps(6, end) infinite; }
+@media (max-width: 700px) {
+  .rolloff-actions .btn-roll { width: 100%; min-width: 0; }
+  .rolloff-name { font-size: 1.15rem; }
+  .die.is-small { width: 44px; height: 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .die.is-small.is-live { animation: none; }
+}

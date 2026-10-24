@@ -54,6 +54,56 @@ test("draft: every team ends with four distinct runners and nobody shares one", 
   }
 });
 
+function rolloffGame(count, seed = 1) {
+  const game = loadGame({ seed });
+  const { state } = game;
+  state.players = Array.from({ length: count }, (_, i) => ({ id: `p${i}`, name: `T${i}`, isBot: false, controllerId: null, color: "#fff", team: [], score: 0 }));
+  state.deck = game.call("shuffle", game.RACERS);
+  state.draftWave = 1;
+  game.call("beginRolloff");
+  return game;
+}
+
+test("roll-off: every team rolls a d4 and the highest picks first", async () => {
+  const game = rolloffGame(3);
+  assert.equal(game.state.phase, "rolloff");
+  game.rig(2, 4, 1);
+  await game.call("rollForFirstPick");
+  assert.equal(game.state.rolloff.winner, "p1");
+  assert.equal(game.state.phase, "draft");
+  assert.deepEqual(Array.from(game.state.draftOrder), [1, 2, 0, 0, 2, 1], "the winner opens the snake");
+});
+
+test("roll-off: tied top rolls roll again, and only the tied teams roll", async () => {
+  const game = rolloffGame(4);
+  game.rig(3, 4, 4, 1, 2, 3);
+  await game.call("rollForFirstPick");
+  const rounds = game.state.rolloff.rounds;
+  assert.equal(rounds.length, 2);
+  assert.deepEqual(Array.from(rounds[1].ids), ["p1", "p2"]);
+  assert.equal(game.state.rolloff.winner, "p2");
+  assert.equal(game.state.draftOrder[0], 2);
+});
+
+test("roll-off: wave two starts with the team after the roll-off winner", async () => {
+  const game = rolloffGame(3);
+  game.rig(1, 1, 4);
+  await game.call("rollForFirstPick");
+  assert.equal(game.state.draftOrder[0], 2);
+  while (game.state.draftWave === 1) game.call("chooseDraftRacer", game.state.draftPool[0].id);
+  assert.equal(game.state.draftOrder[0], 0, "(2 + 1) % 3");
+});
+
+test("roll-off: over many games every seat wins first pick about equally", async () => {
+  const wins = [0, 0, 0, 0];
+  for (let seed = 1; seed <= 400; seed += 1) {
+    const game = rolloffGame(4, seed);
+    await game.call("rollForFirstPick");
+    wins[game.state.firstPicker] += 1;
+  }
+  wins.forEach((count) => assert.ok(count > 70 && count < 130, `seat wins: ${wins.join(", ")}`));
+});
+
 test("selection: each runner can race once, and the race starts when all teams pick", () => {
   const game = loadGame();
   const { state } = game;

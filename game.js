@@ -230,6 +230,8 @@ const state = {
   effectFlash: null,
   busy: false,
   raceOver: false,
+  rolloff: null,
+  firstPicker: 0,
   activeSkills: false,
   lastMove: 0
 };
@@ -585,6 +587,7 @@ function renderPhaseFromState() {
   else if (state.phase === "race") renderRace();
   else if (state.phase === "results") renderRaceResults();
   else if (state.phase === "final") renderFinalResults();
+  else if (state.phase === "rolloff") renderRolloff();
   else if (state.phase === "lobby") renderLobby();
   else renderSetup();
 }
@@ -649,11 +652,38 @@ function skillIcon() {
   return `<svg class="skill-icon" viewBox="0 0 6 8" shape-rendering="crispEdges" aria-hidden="true"><path fill="currentColor" d="M3 0h3v1h-3zM2 1h3v1h-3zM2 2h2v1h-2zM1 3h4v1h-4zM2 4h3v1h-3zM2 5h2v1h-2zM1 6h2v1h-2zM1 7h1v1h-1z"/></svg>`;
 }
 
-function skillToggleHtml(id) {
-  return `<label class="check-row skill-toggle" for="${id}">
-    <input id="${id}" type="checkbox" data-skills-toggle ${activeSkillsSetting ? "checked" : ""} />
-    <span><b>${skillIcon()}Active skills</b> <span class="test-tag">Test</span><br />Every runner also gets one skill to use once per race.</span>
-  </label>`;
+function skillsHint() {
+  return activeSkillsSetting
+    ? "Every runner also gets one skill to use once per race."
+    : "Powers only, like the live game.";
+}
+
+function skillToggleHtml(suffix) {
+  const on = activeSkillsSetting;
+  return `<div class="field rules-field ${on ? "is-skills" : ""}" data-rules-field>
+    <span class="field-label" id="rulesLabel${suffix}">Rules <span class="test-tag">Test</span></span>
+    <div class="segmented rules-switch" role="radiogroup" aria-labelledby="rulesLabel${suffix}">
+      <button id="skillsOff${suffix}" type="button" role="radio" class="segment ${on ? "" : "is-on"}" aria-checked="${!on}" data-skills-mode="off">Classic</button>
+      <button id="skillsOn${suffix}" type="button" role="radio" class="segment is-skill ${on ? "is-on" : ""}" aria-checked="${on}" data-skills-mode="on">${skillIcon()}Active skills</button>
+    </div>
+    <p class="field-hint" data-rules-hint>${skillsHint()}</p>
+  </div>`;
+}
+
+function setSkillsSetting(on) {
+  activeSkillsSetting = on;
+  try {
+    localStorage.setItem("arcaneDashSkills", on ? "on" : "off");
+  } catch (error) {
+    // Storage is optional.
+  }
+  document.querySelectorAll("[data-skills-mode]").forEach((button) => {
+    const selected = (button.dataset.skillsMode === "on") === on;
+    button.classList.toggle("is-on", selected);
+    button.setAttribute("aria-checked", selected ? "true" : "false");
+  });
+  document.querySelectorAll("[data-rules-field]").forEach((field) => field.classList.toggle("is-skills", on));
+  document.querySelectorAll("[data-rules-hint]").forEach((hint) => { hint.textContent = skillsHint(); });
 }
 
 function renderCharacterLibrary(filter = "") {
@@ -696,6 +726,16 @@ document.addEventListener("pointerdown", () => audio.ensure(), { once: true });
 updateSoundButton();
 
 document.addEventListener("keydown", (event) => {
+  if (state.phase === "rolloff" && !event.repeat && (event.key === " " || event.key.toLowerCase() === "r")) {
+    const target = event.target;
+    if (target && (target.closest?.("input, select, textarea, button, dialog[open]") || target.isContentEditable)) return;
+    const button = document.getElementById("rolloffButton");
+    if (button) {
+      event.preventDefault();
+      button.click();
+    }
+    return;
+  }
   if (state.phase !== "race" || event.repeat) return;
   const key = event.key.toLowerCase();
   if (event.key !== " " && key !== "r" && key !== "s") return;
@@ -795,7 +835,7 @@ function renderSetup() {
             </div>
           </div>
           <ul id="playerConfigList" class="player-config-list"></ul>
-          ${skillToggleHtml("skillsToggleLocal")}
+          ${skillToggleHtml("Local")}
           <button id="startButton" class="btn btn-primary btn-block" type="button">Start the draft</button>
         </div>
 
@@ -812,7 +852,7 @@ function renderSetup() {
             <input id="fillBots" type="checkbox" />
             <span>Fill empty seats with bots when you start</span>
           </label>
-          ${skillToggleHtml("skillsToggleHost")}
+          ${skillToggleHtml("Host")}
           <button id="createLobbyButton" class="btn btn-primary btn-block" type="button">Create lobby</button>
           <p class="fine-print">Your browser runs the match, so keep this tab open until the final race.</p>
         </div>
@@ -845,14 +885,9 @@ function renderSetup() {
     });
   });
   document.getElementById("browseRunnersButton").addEventListener("click", openCharacters);
-  document.querySelectorAll("[data-skills-toggle]").forEach((input) => input.addEventListener("change", () => {
-    activeSkillsSetting = input.checked;
-    document.querySelectorAll("[data-skills-toggle]").forEach((other) => { other.checked = activeSkillsSetting; });
-    try {
-      localStorage.setItem("arcaneDashSkills", activeSkillsSetting ? "on" : "off");
-    } catch (error) {
-      // Storage is optional.
-    }
+  document.querySelectorAll("[data-skills-mode]").forEach((button) => button.addEventListener("click", () => {
+    audio.playUi();
+    setSkillsSetting(button.dataset.skillsMode === "on");
   }));
   document.querySelectorAll("[data-runner]").forEach((button) => button.addEventListener("click", () => {
     openCharacters();
@@ -1040,7 +1075,7 @@ async function startHostedGame() {
     state.draftWave = 1;
     state.activeSkills = activeSkillsSetting;
     track("game-start", { ...teamMix(), skills: state.activeSkills });
-    beginDraftWave();
+    beginRolloff();
   } catch (error) {
     network.notice = error.message;
     renderLobby();
@@ -1064,7 +1099,7 @@ function startGame() {
   state.draftWave = 1;
   state.activeSkills = activeSkillsSetting;
   track("game-start", { ...teamMix(), skills: state.activeSkills });
-  beginDraftWave();
+  beginRolloff();
 }
 
 // ---------------------------------------------------------------------------
@@ -1077,8 +1112,116 @@ function makeSnakeOrder(startIndex) {
   return [...forward, ...[...forward].reverse()];
 }
 
+// ---------------------------------------------------------------------------
+// Roll-off: every team rolls a d4, highest picks first in the draft, ties re-roll.
+// ---------------------------------------------------------------------------
+
+const ROLLOFF_SIDES = 4;
+
+function beginRolloff() {
+  state.phase = "rolloff";
+  state.rolloff = { rounds: [], rolling: false, winner: null };
+  state.firstPicker = 0;
+  renderRolloff();
+  maybeAutoRolloff();
+}
+
+// Nobody to press the button (an all-bot local game): roll on our own.
+function maybeAutoRolloff() {
+  if (!isGameAuthority() || state.players.some((player) => !player.isBot)) return;
+  window.setTimeout(() => rollForFirstPick(), 700);
+}
+
+function requestRolloff() {
+  if (canAdvanceGame()) rollForFirstPick();
+}
+
+async function rollForFirstPick() {
+  const rolloff = state.rolloff;
+  if (state.phase !== "rolloff" || !rolloff || rolloff.rolling || rolloff.winner) return;
+  audio.ensure();
+  rolloff.rolling = true;
+  let contenders = state.players.map((player) => player.id);
+  for (let guard = 0; guard < 20; guard += 1) {
+    const round = { ids: contenders, rolls: {} };
+    rolloff.rounds.push(round);
+    renderRolloff();
+    for (let index = 0; index < 8; index += 1) {
+      document.querySelectorAll("[data-rolloff-live]").forEach((die) => setDieFace(die, randomInt(1, ROLLOFF_SIDES)));
+      audio.playDice();
+      await wait(62 + index * 6);
+    }
+    contenders.forEach((id) => { round.rolls[id] = randomInt(1, ROLLOFF_SIDES); });
+    const top = Math.max(...Object.values(round.rolls));
+    contenders = contenders.filter((id) => round.rolls[id] === top);
+    renderRolloff();
+    if (contenders.length === 1) break;
+    await wait(1100);
+  }
+  rolloff.rolling = false;
+  rolloff.winner = contenders[0];
+  state.firstPicker = Math.max(0, state.players.findIndex((player) => player.id === rolloff.winner));
+  audio.playAbility();
+  renderRolloff();
+  await wait(1900);
+  if (state.phase === "rolloff") beginDraftWave();
+}
+
+function rolloffDieHtml(value, live) {
+  const face = live ? "?" : value;
+  const inner = Number.isInteger(face)
+    ? `<span class="pips" data-face="${face}" ${live ? "data-rolloff-live" : ""}>${"<i></i>".repeat(9)}</span>`
+    : `<span class="die-text" ${live ? "data-rolloff-live" : ""}>?</span>`;
+  return `<span class="die is-small ${live ? "is-idle" : ""} ${live && state.rolloff?.rolling ? "is-live" : ""}" aria-label="${live ? "Rolling" : `Rolled ${value}`}">${inner}</span>`;
+}
+
+function renderRolloff() {
+  const rolloff = state.rolloff || { rounds: [], rolling: false, winner: null };
+  const rounds = rolloff.rounds;
+  const latest = rounds[rounds.length - 1];
+  const latestDone = latest && latest.ids.every((id) => latest.rolls[id] !== undefined);
+  const stillIn = latest ? (latestDone ? latest.ids.filter((id) => latest.rolls[id] === Math.max(...latest.ids.map((other) => latest.rolls[other]))) : latest.ids) : state.players.map((player) => player.id);
+  const winner = rolloff.winner && playerById(rolloff.winner);
+  let status;
+  if (winner) status = `<p class="rolloff-status is-winner" style="--team:${winner.color}"><span class="team-swatch"></span>${teamName(winner)} ${winner.name.trim().toLowerCase() === "you" ? "pick" : "picks"} first!</p>`;
+  else if (rolloff.rolling && latestDone && stillIn.length > 1) status = `<p class="rolloff-status">Tie on ${latest.rolls[stillIn[0]]}! Rolling again...</p>`;
+  else if (rolloff.rolling) status = `<p class="rolloff-status">Rolling...</p>`;
+  else if (canAdvanceGame()) status = `<button id="rolloffButton" class="btn btn-primary btn-roll" type="button">Roll the d4s<kbd class="key-hint">R</kbd></button>`;
+  else status = `<p class="waiting-note">Waiting for the host to roll</p>`;
+
+  app.innerHTML = `
+    <section class="phase-screen">
+      <header class="phase-head">
+        <div>
+          <p class="phase-step">Before the draft</p>
+          <h2 class="screen-title">Roll for first pick</h2>
+        </div>
+        <p class="phase-aside">Every team rolls a d4. Highest picks first, then the draft snakes back. Ties roll again.</p>
+      </header>
+      <div class="panel rolloff-panel">
+        <ol class="rolloff-list">
+          ${state.players.map((player) => {
+            const mine = rounds.filter((round) => round.ids.includes(player.id));
+            const out = latestDone && !stillIn.includes(player.id);
+            const dice = mine.map((round) => rolloffDieHtml(round.rolls[player.id], round.rolls[player.id] === undefined)).join("");
+            return `<li class="rolloff-row ${rolloff.winner === player.id ? "is-winner" : ""} ${out || (rolloff.winner && rolloff.winner !== player.id) ? "is-out" : ""}" style="--team:${player.color}">
+              <span class="team-swatch"></span>
+              <span class="rolloff-name">${teamName(player)}${player.isBot ? ' <span class="bot-tag">Bot</span>' : ""}</span>
+              <span class="rolloff-dice">${dice || rolloffDieHtml(null, true).replace("data-rolloff-live", "")}</span>
+            </li>`;
+          }).join("")}
+        </ol>
+        <div class="rolloff-actions">${status}</div>
+      </div>
+    </section>`;
+  const button = document.getElementById("rolloffButton");
+  if (button) button.addEventListener("click", requestRolloff);
+  network.broadcastState();
+}
+
 function beginDraftWave() {
-  const startIndex = state.draftWave === 1 ? 0 : 1 % state.players.length;
+  const first = state.firstPicker || 0;
+  const startIndex = state.draftWave === 1 ? first : (first + 1) % state.players.length;
   state.draftPool = state.deck.splice(0, state.players.length * 2 + 1);
   state.draftOrder = makeSnakeOrder(startIndex);
   state.draftIndex = 0;
@@ -1103,7 +1246,7 @@ function renderDraft() {
           <p class="phase-step">Draft · wave ${state.draftWave} of 2 · pick ${state.draftIndex + 1} of ${state.draftOrder.length}</p>
           <h2 class="screen-title"><span class="team-swatch"></span>${turnHeadline(player, "pick a runner")}</h2>
         </div>
-        <p class="phase-aside">Snake order: the pass reverses after every team.</p>
+        <p class="phase-aside">${state.draftWave === 1 && state.draftIndex === 0 && state.rolloff?.winner ? `${teamName(playerById(state.rolloff.winner))} won the d4 roll. ` : ""}Snake order: the pass reverses after every team.</p>
       </header>
       <div class="phase-layout">
         <div class="card-grid ${controllable ? "" : "is-watching"}">
@@ -1348,7 +1491,7 @@ function mountRace(key, portrait) {
       <div class="race-main">
         <header class="race-head">
           <div>
-            <p class="phase-step">Race ${state.raceNumber + 1} of 4 · ${chaos ? "Chaos track" : "Calm track"}</p>
+            <p class="phase-step">Race ${state.raceNumber + 1} of 4 · ${chaos ? "Chaos track" : "Calm track"}${state.activeSkills ? ` · <span class="skills-on-tag">${skillIcon()}Active skills</span>` : ""}</p>
             <h2 class="screen-title">${theme.name}</h2>
           </div>
           <p class="stakes"><span class="medal is-gold">1st</span> +${points[0]} <span class="medal is-silver">2nd</span> +${points[1]}</p>

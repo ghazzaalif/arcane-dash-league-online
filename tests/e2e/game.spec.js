@@ -18,6 +18,8 @@ async function draftAndSelect(page) {
   for (let i = 0; i < 80; i += 1) {
     const phase = await page.evaluate(() => state.phase);
     if (phase === "race") return;
+    const roll = page.locator("#rolloffButton");
+    if (phase === "rolloff" && await roll.count()) await roll.click();
     const card = page.locator("[data-draft-id]:not([disabled]), [data-select-id]:not([disabled])").first();
     if (await card.count()) await card.click();
     await page.clock.runFor(800);
@@ -59,6 +61,10 @@ test("human turn: draft, pick a runner, roll with the keyboard, token moves", as
   await page.goto("/");
   await page.click('[data-team-count="2"]');
   await page.click("#startButton");
+  await expect(page.locator("#rolloffButton")).toBeVisible();
+  await noHorizontalScroll(page);
+  await page.locator("#rolloffButton").click();
+  await page.clock.runFor(4000);
   await expect(page.locator(".runner-card").first()).toBeVisible();
   await noHorizontalScroll(page);
   await draftAndSelect(page);
@@ -99,8 +105,10 @@ test("active skills: the skill button uses the skill once, and the setup toggle 
   await page.clock.install();
   await page.goto("/");
   await page.click('[data-team-count="2"]');
-  await expect(page.locator("#skillsToggleLocal")).toBeChecked();
+  await expect(page.locator("#skillsOnLocal")).toHaveAttribute("aria-checked", "true");
   await page.click("#startButton");
+  await page.locator("#rolloffButton").click();
+  await page.clock.runFor(4000);
   await expect(page.locator(".runner-card .is-active-skill").first()).toBeVisible();
   await draftAndSelect(page);
   // Give the human a skill that is always ready, so the test doesn't depend on the draw.
@@ -128,16 +136,20 @@ test("active skills: the skill button uses the skill once, and the setup toggle 
 
   await page.goto("/");
   await page.click('[data-team-count="2"]');
-  await page.uncheck("#skillsToggleLocal");
+  await page.click("#skillsOffLocal");
+  await expect(page.locator("#skillsOffLocal")).toHaveAttribute("aria-checked", "true");
   await page.click("#startButton");
+  await page.locator("#rolloffButton").click();
+  await page.clock.runFor(4000);
+  await expect(page.locator(".runner-card").first()).toBeVisible();
   await expect(page.locator(".runner-card .is-active-skill")).toHaveCount(0);
   await draftAndSelect(page);
   await page.clock.runFor(1500);
   await expect(page.locator("#skillButton")).toHaveCount(0);
   expect(await page.evaluate(() => state.activeSkills)).toBe(false);
   await page.goto("/");
-  await expect(page.locator("#skillsToggleLocal")).not.toBeChecked();
-  await page.check("#skillsToggleLocal");
+  await expect(page.locator("#skillsOnLocal")).toHaveAttribute("aria-checked", "false");
+  await page.click("#skillsOnLocal");
   expect(errors).toEqual([]);
 });
 
@@ -188,11 +200,13 @@ test("online: host and guest stay in sync through a race", async ({ browser }, t
   await expect(guest.locator(".lobby-screen")).toBeVisible();
   await expect(host.locator(".seat")).toHaveCount(3);
   await host.click("#startLobbyGameButton");
+  await expect(host.locator("#rolloffButton")).toBeVisible();
+  await expect(guest.locator(".rolloff-panel .waiting-note")).toBeVisible();
 
   let done = false;
   for (let i = 0; i < 500 && !done; i += 1) {
     for (const page of [host, guest]) {
-      const action = page.locator("[data-draft-id]:not([disabled]), [data-select-id]:not([disabled]), #rollButton:not([disabled])").first();
+      const action = page.locator("#rolloffButton, [data-draft-id]:not([disabled]), [data-select-id]:not([disabled]), #rollButton:not([disabled])").first();
       if (await action.count()) await action.click().catch(() => {});
     }
     await host.waitForTimeout(250);
@@ -211,7 +225,8 @@ test("static hosting: online modes switch off, local play still works", async ({
   await expect(page.locator('[data-setup-mode="create"]')).toBeDisabled();
   await expect(page.locator('[data-setup-mode="local"]')).toBeEnabled();
   await page.click("#startButton");
-  await expect(page.locator(".runner-card").first()).toBeVisible();
+  await page.click("#rolloffButton");
+  await expect(page.locator(".runner-card").first()).toBeVisible({ timeout: 10000 });
 });
 
 test("small phones (360px): no screen scrolls sideways", async ({ page }, testInfo) => {
@@ -222,6 +237,10 @@ test("small phones (360px): no screen scrolls sideways", async ({ page }, testIn
   await noHorizontalScroll(page);
   await page.click('[data-team-count="2"]');
   await page.click("#startButton");
+  await expect(page.locator("#rolloffButton")).toBeVisible();
+  await noHorizontalScroll(page);
+  await page.locator("#rolloffButton").click();
+  await page.clock.runFor(4000);
   await expect(page.locator(".runner-card").first()).toBeVisible();
   await noHorizontalScroll(page);
   await draftAndSelect(page);

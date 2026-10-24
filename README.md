@@ -162,7 +162,7 @@ runner in `RACERS` hold the numbers the rules read.
 
 ## Active skills (test)
 
-A setup toggle ("Active skills", on by default in this build) gives every runner one skill on
+A "Rules" switch on the setup card (Classic / Active skills, on by default in this build) gives every runner one skill on
 top of its power. A skill is used once per race at the start of your own turn (button or the
 S key); "then roll" skills resolve first and the turn carries on. The button says why when a
 skill can't be used yet (no rival in range, wrong turn, tripped). Bots and the simulator use
@@ -197,6 +197,13 @@ With skills off, the rules are exactly the classic ones.
 | Pepper Pixie | Hot Sauce | Gain 2, or 4 once you're on space 20 or later. |
 
 With skills on, the seeded simulator puts every runner between 0.92x and 1.06x of a fair share.
+
+## First pick
+
+Before the draft every team rolls a d4 on a roll-off screen. The highest roll picks first;
+tied top rolls roll again (only the tied teams). Wave two of the snake draft starts with the
+team after the roll-off winner. Online, the host rolls and guests watch; in an all-bot local
+game it rolls by itself.
 
 ## Tracks
 

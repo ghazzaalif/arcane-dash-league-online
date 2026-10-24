@@ -17,7 +17,9 @@ async function playLocalGame(game) {
   game.call("startGame");
   for (let guard = 0; guard < 20000 && state.phase !== "final"; guard += 1) {
     const human = state.players.find((player) => !player.isBot);
-    if (state.phase === "draft" && game.call("currentDraftPlayer") === human) {
+    if (state.phase === "rolloff" && !state.rolloff.rolling && !state.rolloff.winner) {
+      game.call("rollForFirstPick");
+    } else if (state.phase === "draft" && game.call("currentDraftPlayer") === human) {
       game.call("chooseDraftRacer", state.draftPool[0].id);
     } else if (state.phase === "selection" && game.call("currentSelectionPlayer") === human) {
       game.call("chooseRaceRacer", human.team.find((slot) => !slot.used).racerId);
