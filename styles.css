@@ -20,6 +20,9 @@
   --frame-silver: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='7' height='7' shape-rendering='crispEdges'%3E%3Cpath fill='%23221d33' d='M1 0h5v1h-5zM0 1h1v1h-1zM6 1h1v1h-1zM0 2h1v1h-1zM6 2h1v1h-1zM0 3h1v1h-1zM6 3h1v1h-1zM0 4h1v1h-1zM6 4h1v1h-1zM0 5h1v1h-1zM6 5h1v1h-1zM1 6h5v1h-5z'/%3E%3Cpath fill='%23ffffff' d='M1 1h5v1h-5zM1 2h1v1h-1zM1 3h1v1h-1zM1 4h1v1h-1z'/%3E%3Cpath fill='%23c9d3e6' d='M2 2h3v1h-3zM2 3h3v1h-3zM2 4h3v1h-3z'/%3E%3Cpath fill='%238f9bb5' d='M5 2h1v1h-1zM5 3h1v1h-1zM5 4h1v1h-1zM1 5h5v1h-5z'/%3E%3C/svg%3E");
   --frame-sky: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='7' height='7' shape-rendering='crispEdges'%3E%3Cpath fill='%23221d33' d='M1 0h5v1h-5zM0 1h1v1h-1zM6 1h1v1h-1zM0 2h1v1h-1zM6 2h1v1h-1zM0 3h1v1h-1zM6 3h1v1h-1zM0 4h1v1h-1zM6 4h1v1h-1zM0 5h1v1h-1zM6 5h1v1h-1zM1 6h5v1h-5z'/%3E%3Cpath fill='%23f2f8ff' d='M1 1h5v1h-5zM1 2h1v1h-1zM1 3h1v1h-1zM1 4h1v1h-1z'/%3E%3Cpath fill='%23cfe3ff' d='M2 2h3v1h-3zM2 3h3v1h-3zM2 4h3v1h-3z'/%3E%3Cpath fill='%238aa6cf' d='M5 2h1v1h-1zM5 3h1v1h-1zM5 4h1v1h-1zM1 5h5v1h-5z'/%3E%3C/svg%3E");
   --frame-tip: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='7' height='7' shape-rendering='crispEdges'%3E%3Cpath fill='%2305070f' d='M1 0h5v1h-5zM0 1h1v1h-1zM6 1h1v1h-1zM0 2h1v1h-1zM5 2h1v1h-1zM6 2h1v1h-1zM0 3h1v1h-1zM5 3h1v1h-1zM6 3h1v1h-1zM0 4h1v1h-1zM5 4h1v1h-1zM6 4h1v1h-1zM0 5h1v1h-1zM1 5h5v1h-5zM6 5h1v1h-1zM1 6h5v1h-5z'/%3E%3Cpath fill='%232a3453' d='M1 1h5v1h-5zM1 2h1v1h-1zM1 3h1v1h-1zM1 4h1v1h-1z'/%3E%3Cpath fill='%230b0f1c' d='M2 2h3v1h-3zM2 3h3v1h-3zM2 4h3v1h-3z'/%3E%3C/svg%3E");
+  --frame-arcane: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='7' height='7' shape-rendering='crispEdges'%3E%3Cpath fill='%23221d33' d='M1 0h5v1h-5zM0 1h1v1h-1zM6 1h1v1h-1zM0 2h1v1h-1zM6 2h1v1h-1zM0 3h1v1h-1zM6 3h1v1h-1zM0 4h1v1h-1zM6 4h1v1h-1zM0 5h1v1h-1zM6 5h1v1h-1zM1 6h5v1h-5z'/%3E%3Cpath fill='%23e9dcff' d='M1 1h5v1h-5zM1 2h1v1h-1zM1 3h1v1h-1zM1 4h1v1h-1z'/%3E%3Cpath fill='%23b48cff' d='M2 2h3v1h-3zM2 3h3v1h-3zM2 4h3v1h-3z'/%3E%3Cpath fill='%237a52d1' d='M5 2h1v1h-1zM5 3h1v1h-1zM5 4h1v1h-1zM1 5h5v1h-5z'/%3E%3C/svg%3E");
+  --frame-arcane-down: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='7' height='7' shape-rendering='crispEdges'%3E%3Cpath fill='%23221d33' d='M1 0h5v1h-5zM0 1h1v1h-1zM6 1h1v1h-1zM0 2h1v1h-1zM6 2h1v1h-1zM0 3h1v1h-1zM6 3h1v1h-1zM0 4h1v1h-1zM6 4h1v1h-1zM0 5h1v1h-1zM6 5h1v1h-1zM1 6h5v1h-5z'/%3E%3Cpath fill='%237a52d1' d='M1 1h5v1h-5zM1 2h1v1h-1zM1 3h1v1h-1zM1 4h1v1h-1z'/%3E%3Cpath fill='%23a47cf0' d='M2 2h3v1h-3zM2 3h3v1h-3zM2 4h3v1h-3z'/%3E%3Cpath fill='%23e9dcff' d='M5 2h1v1h-1zM5 3h1v1h-1zM5 4h1v1h-1zM1 5h5v1h-5z'/%3E%3C/svg%3E");
+  --arcane: #b48cff;
   --bg: #0f1424;
   --bg-dot: #182040;
   --surface: #161d31;
@@ -868,3 +871,97 @@ dialog[open] { animation: dialog-in 160ms steps(3, end); }
 .control-toggle, .role-chip, .mood-tag, .die { background-color: #f4f1ea; }
 .medal.is-silver { background-color: #c9d3e6; }
 .die.d8 { background-color: #cfe3ff; }
+
+/* ---------- Active skills (test build) ---------- */
+.skill-icon { width: 0.62em; height: 0.82em; margin-right: 0.3em; vertical-align: -0.05em; flex: none; }
+.runner-card-power.is-active-skill b, .tip-power.is-active-skill b, .turn-power.is-active-skill b { color: var(--arcane); }
+button.runner-card:hover:not(:disabled) .runner-card-power.is-active-skill b { color: #4b2a8f; }
+.runner-card-power.is-active-skill { margin-top: 4px; }
+.tip-power.is-active-skill { margin-top: 2px; }
+.skill-toggle { padding: 2px 0; }
+.skill-toggle b { color: var(--arcane); font-family: var(--display); font-size: 1.05rem; text-transform: uppercase; }
+.skill-toggle input { accent-color: var(--arcane); }
+.test-tag { display: inline-block; padding: 0 5px; color: var(--ink); background: var(--arcane); font-family: var(--display); font-size: 0.78rem; font-weight: 700; text-transform: uppercase; vertical-align: 1px; }
+.turn-buttons { display: grid; gap: 10px; min-width: 0; }
+.btn-skill {
+  display: grid;
+  justify-items: center;
+  gap: 0;
+  min-height: 52px;
+  color: var(--ink);
+  border-image-source: var(--frame-arcane);
+  text-transform: uppercase;
+}
+.btn-skill:active:not(:disabled) { border-image-source: var(--frame-arcane-down); }
+.btn-skill:disabled { color: var(--muted); border-image-source: var(--frame-dark); opacity: 0.7; }
+.btn-skill-name { display: inline-flex; align-items: center; gap: 2px; font-size: 1.25rem; }
+.btn-skill .key-hint { margin-left: 8px; color: var(--arcane); }
+.btn-skill small { font-family: var(--body); font-size: 0.76rem; font-weight: 700; text-transform: none; opacity: 0.85; }
+.skill-state { color: var(--arcane); font-family: var(--display); font-size: 1rem; }
+.skill-state.is-spent { color: var(--faint); }
+.skill-pip { display: inline-grid; place-items: center; margin-left: 6px; color: var(--arcane); font-size: 0.9rem; }
+.skill-pip .skill-icon { margin: 0; }
+.skill-pip.is-spent { color: var(--line); }
+.standing.is-active .skill-pip { color: #4b2a8f; }
+.standing.is-active .skill-pip.is-spent { color: #b39a5e; }
+.callout.is-skill { border-image-source: var(--frame-arcane); color: var(--ink); }
+.callout.is-skill strong { color: var(--ink); display: inline-flex; align-items: center; }
+.callout.is-skill .callout-who, .callout.is-skill .callout-detail { color: #2c1b52; }
+.token.has-wall .token-body { box-shadow: 0 0 0 3px var(--void), 0 0 0 max(5px, calc(8 * var(--u))) #9aa3b5, 0 0 0 max(8px, calc(12 * var(--u))) var(--void); }
+.token.is-frozen .token-body img { filter: hue-rotate(170deg) saturate(0.6) brightness(1.15); }
+@media (max-width: 700px) {
+  .btn-skill { min-height: 48px; }
+  .btn-skill-name { font-size: 1.1rem; }
+}
+@media (max-width: 700px) {
+  .turn-buttons:has(.btn-skill) { grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 8px; }
+  .turn-buttons:has(.btn-skill) .btn-roll { min-height: 58px; font-size: 1.4rem; padding: 4px 6px; }
+  .turn-buttons .btn-skill { min-height: 58px; padding: 4px 6px; }
+  .btn-skill small { font-size: 0.7rem; line-height: 1.2; }
+}
+
+/* Rules switch on the setup card: Classic vs Active skills */
+.rules-switch { grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); }
+.rules-switch .segment { display: inline-flex; align-items: center; justify-content: center; gap: 2px; padding: 4px 8px; font-size: 1.2rem; text-transform: uppercase; }
+.rules-switch .segment.is-skill.is-on { color: var(--ink); border-image-source: var(--frame-arcane); }
+.rules-switch .segment.is-skill:not(.is-on) { color: var(--arcane); }
+.rules-field .field-hint { margin: 0; color: var(--muted); font-size: 0.9rem; }
+.rules-field.is-skills .field-hint { color: #d9c6ff; }
+.rules-field .field-label { display: flex; align-items: center; gap: 8px; }
+.skills-on-tag { display: inline-flex; align-items: center; color: var(--arcane); }
+
+/* Roll-off for first pick */
+.rolloff-panel { display: grid; gap: 18px; max-width: 640px; padding: 14px; }
+.rolloff-list { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.rolloff-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+  padding: 4px 10px;
+  border: 8px solid transparent;
+  border-image: var(--frame-raised) 2 fill / 8px / 0 stretch;
+  transition: opacity 150ms var(--step);
+}
+.rolloff-row.is-winner { border-image-source: var(--frame-gold); color: var(--ink); }
+.rolloff-row.is-winner .bot-tag { color: var(--ink); }
+.rolloff-row.is-out { opacity: 0.45; }
+.rolloff-name { min-width: 0; font-family: var(--display); font-weight: 700; font-size: 1.35rem; overflow-wrap: anywhere; }
+.rolloff-dice { display: flex; gap: 8px; }
+.die.is-small { width: 50px; height: 50px; border-width: 6px; font-size: 1.5rem; }
+.die.is-small .pips { grid-template-columns: repeat(3, 7px); grid-template-rows: repeat(3, 7px); gap: 2px; }
+.die.is-small .pips i { width: 7px; height: 7px; }
+.rolloff-actions { display: grid; justify-items: start; }
+.rolloff-actions .btn-roll { min-width: 240px; }
+.rolloff-status { font-family: var(--display); font-weight: 700; font-size: 1.6rem; text-transform: uppercase; color: var(--muted); }
+.rolloff-status.is-winner { display: inline-flex; align-items: center; gap: 10px; color: var(--gold); }
+.die.is-small.is-live { animation: die-tumble 480ms steps(6, end) infinite; }
+@media (max-width: 700px) {
+  .rolloff-actions .btn-roll { width: 100%; min-width: 0; }
+  .rolloff-name { font-size: 1.15rem; }
+  .die.is-small { width: 44px; height: 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .die.is-small.is-live { animation: none; }
+}

@@ -17,7 +17,9 @@ async function playLocalGame(game) {
   game.call("startGame");
   for (let guard = 0; guard < 20000 && state.phase !== "final"; guard += 1) {
     const human = state.players.find((player) => !player.isBot);
-    if (state.phase === "draft" && game.call("currentDraftPlayer") === human) {
+    if (state.phase === "rolloff" && !state.rolloff.rolling && !state.rolloff.winner) {
+      game.call("rollForFirstPick");
+    } else if (state.phase === "draft" && game.call("currentDraftPlayer") === human) {
       game.call("chooseDraftRacer", state.draftPool[0].id);
     } else if (state.phase === "selection" && game.call("currentSelectionPlayer") === human) {
       game.call("chooseRaceRacer", human.team.find((slot) => !slot.used).racerId);
@@ -50,7 +52,7 @@ test("analytics: a local game sends start, human picks, four races and a finish"
   const names = events.map((event) => event.name);
   assert.deepEqual(names.filter((name) => name === "game-start").length, 1);
   // Data objects come from the game's VM realm, so compare as plain JSON.
-  assert.deepEqual(JSON.parse(JSON.stringify(events.find((event) => event.name === "game-start").data)), { mode: "local", teams: 3, humans: 1, bots: 2 });
+  assert.deepEqual(JSON.parse(JSON.stringify(events.find((event) => event.name === "game-start").data)), { mode: "local", teams: 3, humans: 1, bots: 2, skills: true });
 
   const picks = events.filter((event) => event.name === "draft-pick");
   assert.equal(picks.length, 4, "only the human's four picks are sent, not the bots'");

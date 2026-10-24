@@ -105,11 +105,11 @@ function loadGame(options = {}) {
     state.players = racers.map((_, index) => ({ id: `p${index}`, name: `T${index}`, isBot: bots, controllerId: null, color: "#fff", team: [], score: 0 }));
     Object.assign(state, {
       phase: "race", raceNumber, entrants: [], finishers: [], log: [], lastRoll: null, previousNaturalRoll: null,
-      busy: false, raceOver: false, motionPlayerId: null, abilityFlash: null, effectFlash: null, diceSides: 6
+      busy: false, raceOver: false, motionPlayerId: null, abilityFlash: null, effectFlash: null, diceSides: 6, lastMove: 0
     });
     state.entrants = racers.map((racerId, index) => ({
       playerId: `p${index}`, racerId, pos: positions[index] || 0, tripped: false, finished: false, finishPlace: null,
-      turns: 0, usedReroll: false, crossedTwenty: false, napping: false, charge: 0
+      turns: 0, usedReroll: false, crossedTwenty: false, napping: false, charge: 0, skillUsed: false, wall: false, frozen: 0
     }));
     ctx.startRace();
     return state;
